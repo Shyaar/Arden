@@ -29,6 +29,7 @@ export default function Register() {
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [isShaking, setIsShaking] = useState(false)
   const [alert, setAlert] = useState({ isVisible: false, message: "", variant: "success" as "success" | "error" })
   const [, setUserName] = useLocalStorage<string | null>("userName", null)
   const [, setUserData] = useLocalStorage<FormData | null>("userData", null)
@@ -36,13 +37,16 @@ export default function Register() {
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    const nameError = validateRequired(formData.name, "Name")
+    const nameError = validateRequired(formData.name, "name")
     if (nameError) newErrors[nameError.field] = nameError.message
 
     const emailError = validateEmail(formData.email)
     if (emailError) newErrors[emailError.field] = emailError.message
 
-    const descError = validateMinLength(formData.description, "Description", 10)
+    const roleError = validateRequired(formData.role, "role")
+    if (roleError) newErrors["role"] = roleError.message
+
+    const descError = validateMinLength(formData.description, "description", 10)
     if (descError) newErrors[descError.field] = descError.message
 
     setErrors(newErrors)
@@ -58,6 +62,8 @@ export default function Register() {
         message: "Please fix the errors below",
         variant: "error",
       })
+      setIsShaking(true)
+      setTimeout(() => setIsShaking(false), 500)
       return
     }
 
@@ -105,7 +111,7 @@ export default function Register() {
 
           <form onSubmit={handleSubmit} className="space-y-5 bg-card border border-border rounded-lg p-6">
             {/* Name Field */}
-            <div>
+            <div className={isShaking && errors.name ? 'shake' : ''}>
               <label className="text-sm font-semibold text-foreground block mb-2">Full Name</label>
               <input
                 type="text"
@@ -126,7 +132,7 @@ export default function Register() {
             </div>
 
             {/* Email Field */}
-            <div>
+            <div className={isShaking && errors.email ? 'shake' : ''}>
               <label className="text-sm font-semibold text-foreground block mb-2">Email Address</label>
               <input
                 type="email"
@@ -147,21 +153,29 @@ export default function Register() {
             </div>
 
             {/* Role Field */}
-            <div>
+            <div className={isShaking && errors.role ? 'shake' : ''}>
               <label className="text-sm font-semibold text-foreground block mb-2">I am a</label>
               <select
                 name="role"
                 value={formData.role}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:border-accent"
+                className={`w-full px-3 py-2.5 bg-background border rounded-lg text-foreground focus:outline-none focus:border-accent ${
+                  errors.role ? "border-red-500" : "border-border focus:border-accent"
+                }`}
               >
                 <option value="user">User (Looking to earn rewards)</option>
                 <option value="builder">Builder (Looking to launch campaigns)</option>
               </select>
+              {errors.role && (
+                <div className="flex items-center gap-2 mt-1.5 text-red-400 text-sm">
+                  <AlertCircle size={14} />
+                  {errors.role}
+                </div>
+              )}
             </div>
 
             {/* Description Field */}
-            <div>
+            <div className={isShaking && errors.description ? 'shake' : ''}>
               <label className="text-sm font-semibold text-foreground block mb-2">About You</label>
               <textarea
                 name="description"

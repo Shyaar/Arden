@@ -10,9 +10,10 @@ import { CampaignCard } from "@/components/campaign-card"
 import { Modal } from "@/components/modal"
 import { AlertBox } from "@/components/alert-box"
 import { campaigns } from "@/data/campaign"
-import { Wrench, User, PlusCircle, BadgeCheck, Search, AlertCircle } from "lucide-react"
-import { validateRequired } from "@/lib/validation"
+import { Wrench, User, PlusCircle, BadgeCheck, Search, AlertCircle, LogOut } from "lucide-react"
+import { validateRequired, validateNumber, validateMinLength } from "@/lib/validation"
 import { useLocalStorage } from "@/hooks/use-localStorage"
+import { useRouter } from "next/navigation"
 
 interface CampaignData {
   title: string
@@ -22,15 +23,19 @@ interface CampaignData {
 }
 
 export default function Dashboard() {
+  const router = useRouter()
   const [view, setView] = useState<"builder" | "user">("user")
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
   const [alert, setAlert] = useState({ isVisible: false, message: "", variant: "success" as "success" | "error" })
   const [joinedCampaigns, setJoinedCampaigns] = useLocalStorage<string[]>("joinedCampaigns", [])
   const [createdCampaigns, setCreatedCampaigns] = useLocalStorage<CampaignData[]>("createdCampaigns", [])
   const [searchTerm, setSearchTerm] = useState("")
-  const [userName] = useLocalStorage<string | null>("userName", null)
+  const [userName, setUserName] = useLocalStorage<string | null>("userName", null)
+  const [, setUserData] = useLocalStorage<any | null>("userData", null)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [isShaking, setIsShaking] = useState(false)
   const [formData, setFormData] = useState<CampaignData>({
     title: "",
     description: "",
@@ -41,25 +46,25 @@ export default function Dashboard() {
   useEffect(() => {
     if (!userName && typeof window !== "undefined") {
       const timer = setTimeout(() => {
-        window.location.href = "/register"
+        router.push("/register")
       }, 1500)
       return () => clearTimeout(timer)
     }
-  }, [userName])
+  }, [userName, router])
 
   const validateCreateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    const titleError = validateRequired(formData.title, "Campaign Title")
+    const titleError = validateRequired(formData.title, "title")
     if (titleError) newErrors[titleError.field] = titleError.message
 
-    const descError = validateRequired(formData.description, "Description")
+    const descError = validateMinLength(formData.description, "description", 10)
     if (descError) newErrors[descError.field] = descError.message
 
-    const rewardError = validateRequired(formData.reward, "Reward Amount")
+    const rewardError = validateNumber(formData.reward, "reward")
     if (rewardError) newErrors[rewardError.field] = rewardError.message
 
-    const maxError = validateRequired(formData.maxParticipants, "Max Participants")
+    const maxError = validateNumber(formData.maxParticipants, "maxParticipants")
     if (maxError) newErrors[maxError.field] = maxError.message
 
     setFormErrors(newErrors)
@@ -75,6 +80,8 @@ export default function Dashboard() {
         message: "Please fill out all fields correctly",
         variant: "error",
       })
+      setIsShaking(true)
+      setTimeout(() => setIsShaking(false), 500)
       return
     }
 
@@ -105,6 +112,13 @@ export default function Dashboard() {
       })
       setTimeout(() => setAlert({ isVisible: false, message: "", variant: "success" }), 5000)
     }
+  }
+
+  const handleLogout = () => {
+    setUserName(null)
+    setUserData(null)
+    setIsLogoutModalOpen(false)
+    router.push("/register")
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -142,10 +156,21 @@ export default function Dashboard() {
       <main className="min-h-screen max-w-7xl mx-auto px-6 py-12">
         {/* Welcome Section */}
         <AnimatedSection className="mb-12 p-6 bg-card border border-border rounded-lg">
-          <h1 className="text-3xl font-bold mb-2">Welcome back, {userName} 👋</h1>
-          <p className="text-muted-foreground">
-            {view === "user" ? "Discover new campaigns and earn rewards" : "Manage your active campaigns"}
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Welcome back, {userName} 👋</h1>
+              <p className="text-muted-foreground">
+                {view === "user" ? "Discover new campaigns and earn rewards" : "Manage your active campaigns"}
+              </p>
+            </div>
+            <button
+              onClick={() => setIsLogoutModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors font-semibold"
+            >
+              <LogOut size={18} />
+              Logout
+            </button>
+          </div>
         </AnimatedSection>
 
         {/* Tabs */}
@@ -271,7 +296,7 @@ export default function Dashboard() {
           icon={<PlusCircle size={24} />}
         >
           <form onSubmit={handleCreateCampaign} className="space-y-4">
-            <div>
+            <div className={isShaking && formErrors.title ? 'shake' : ''}>
               <label className="text-sm font-semibold text-foreground block mb-2">Campaign Title</label>
               <input
                 type="text"
@@ -291,13 +316,13 @@ export default function Dashboard() {
               )}
             </div>
 
-            <div>
+            <div className={isShaking && formErrors.description ? 'shake' : ''}>
               <label className="text-sm font-semibold text-foreground block mb-2">Description</label>
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                placeholder="What do you want users to do?"
+                placeholder="What do you want users to do? (min. 10 characters)"
                 required
                 rows={3}
                 className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors resize-none ${
@@ -313,14 +338,14 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className={isShaking && formErrors.reward ? 'shake' : ''}>
                 <label className="text-sm font-semibold text-foreground block mb-2">Reward Amount</label>
                 <input
                   type="text"
                   name="reward"
                   value={formData.reward}
                   onChange={handleInputChange}
-                  placeholder="e.g., 500 USDC"
+                  placeholder="e.g., 500"
                   className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
                     formErrors.reward ? "border-red-500" : "border-border focus:border-accent"
                   }`}
@@ -332,7 +357,7 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
-              <div>
+              <div className={isShaking && formErrors.maxParticipants ? 'shake' : ''}>
                 <label className="text-sm font-semibold text-foreground block mb-2">Max Participants</label>
                 <input
                   type="number"
@@ -371,6 +396,32 @@ export default function Dashboard() {
               )}
             </button>
           </form>
+        </Modal>
+
+        {/* Logout Confirmation Modal */}
+        <Modal
+          isOpen={isLogoutModalOpen}
+          onClose={() => setIsLogoutModalOpen(false)}
+          title="Confirm Logout"
+          icon={<LogOut size={24} />}
+        >
+          <div>
+            <p className="text-muted-foreground mb-6">Are you sure you want to log out?</p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => setIsLogoutModalOpen(false)}
+                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-opacity font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90 transition-opacity font-semibold"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
         </Modal>
 
         {/* Alert Box */}

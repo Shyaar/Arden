@@ -21,6 +21,26 @@ export function validateRequired(value: string, fieldName: string): ValidationEr
   return null
 }
 
+
+
+export function validateNumber(value: string, fieldName: string): ValidationError | null {
+
+  if (!/^[0-9]+$/.test(value)) {
+
+    return { field: fieldName, message: `${fieldName} must be a number` }
+
+  }
+
+  if (Number(value) <= 0) {
+
+    return { field: fieldName, message: `${fieldName} must be greater than 0` }
+
+  }
+
+  return null
+
+}
+
 export function validateMinLength(value: string, fieldName: string, minLength: number): ValidationError | null {
   if (value.trim().length < minLength) {
     return { field: fieldName, message: `${fieldName} must be at least ${minLength} characters` }
