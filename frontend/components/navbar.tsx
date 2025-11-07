@@ -43,7 +43,7 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-md">
+      <nav className="sticky z-50 top-0 z-30 border-b border-border bg-background/95 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group hover:opacity-80 transition-opacity">
             <Image src="/logo.png" alt="Arden Logo" width={32} height={32} />

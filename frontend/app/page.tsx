@@ -34,88 +34,37 @@ export default function Home() {
       <Navbar />
       <main className="min-h-screen">
         {/* Hero Section */}
-        <section id="home" className="max-w-7xl mx-auto px-6 py-20 md:py-32">
-          <AnimatedSection className="text-center mb-12">
+        <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute z-10 w-full h-screen object-cover"
+          >
+            <source src="/backgroung_video.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+          <div className="absolute z-20 inset-0 bg-black/95"></div>
+          <AnimatedSection className="relative z-30 text-center text-white px-6 py-20 md:py-32">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full border border-accent/30 mb-6">
               <Rocket size={16} className="text-accent" />
               <span className="text-sm font-semibold text-accent">Launch Your Product</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 text-foreground">Find Your First Users</h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 text-white">Find Your First Users</h1>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8">
               Connect with real users who want to help. Run incentivized campaigns to gather feedback, build community,
               and scale sustainably.
             </p>
             <button
               onClick={() => {
-                window.location.href = "/register"
+                router.push("/dashboard")
               }}
               className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity"
             >
               Get Started
               <ArrowRight size={20} />
             </button>
-          </AnimatedSection>
-
-          <AnimatedSection delay={0.1} id="how-it-works" className="grid md:grid-cols-2 gap-8 mt-16">
-            {/* For Builders */}
-            <div className="bg-card border border-border rounded-lg p-8">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-accent/10 rounded-lg text-accent">
-                  <Hammer size={24} />
-                </div>
-                <h2 className="text-2xl font-bold">For Builders</h2>
-              </div>
-              <p className="text-muted-foreground mb-6">
-                Create campaigns to find your first users and gather valuable feedback.
-              </p>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-start gap-3">
-                  <BadgeCheck size={18} className="text-accent mt-1 flex-shrink-0" />
-                  <span>Launch campaigns in minutes</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <BadgeCheck size={18} className="text-accent mt-1 flex-shrink-0" />
-                  <span>Access vetted, engaged users</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <BadgeCheck size={18} className="text-accent mt-1 flex-shrink-0" />
-                  <span>Collect actionable feedback</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <BadgeCheck size={18} className="text-accent mt-1 flex-shrink-0" />
-                  <span>Build your community</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* For Users */}
-            <div className="bg-card border border-border rounded-lg p-8">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-accent/10 rounded-lg text-accent">
-                  <MousePointer size={24} />
-                </div>
-                <h2 className="text-2xl font-bold">For Users</h2>
-              </div>
-              <p className="text-muted-foreground mb-6">Help shape the future. Complete tasks and earn rewards.</p>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-start gap-3">
-                  <BadgeCheck size={18} className="text-accent mt-1 flex-shrink-0" />
-                  <span>Earn rewards for your time</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <BadgeCheck size={18} className="text-accent mt-1 flex-shrink-0" />
-                  <span>Discover new products early</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <BadgeCheck size={18} className="text-accent mt-1 flex-shrink-0" />
-                  <span>Your feedback matters</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <BadgeCheck size={18} className="text-accent mt-1 flex-shrink-0" />
-                  <span>Join a community</span>
-                </li>
-              </ul>
-            </div>
           </AnimatedSection>
         </section>
 
