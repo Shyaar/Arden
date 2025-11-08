@@ -59,7 +59,7 @@ export function WalletModal({ isOpen, onClose, onConnect, isConnected }: WalletM
             animate="visible"
             exit="exit"
             transition={{ type: "spring", damping: 20, stiffness: 300 }}
-            className="fixed right-0 top-0 sm:top-auto sm:bottom-0 h-screen sm:h-full w-full sm:w-96 bg-card border-l border-border shadow-2xl z-50 overflow-y-auto rounded-t-lg sm:rounded-t-none"
+            className="fixed right-10 top-0 sm:top-auto sm:bottom-0 h-screen sm:h-full w-full sm:w-96 bg-card border-l border-border shadow-2xl z-50 overflow-y-auto rounded-t-lg sm:rounded-t-none"
           >
             <div className="p-6 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-3">

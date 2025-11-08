@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Campaign, Task } from "@/types/campaign"
 import { CampaignData } from "@/types/dashboard"
 import {
@@ -25,13 +25,11 @@ import { AlertBox } from "@/components/alert-box"
 
 export const CampaignDetails = ({ campaign }: { campaign: Campaign }) => {
   const [alert, setAlert] = useState({ isVisible: false, message: "", variant: "success" as "success" | "error" })
-  const [createdCampaigns, setCreatedCampaigns] = useLocalStorage<CampaignData[]>("createdCampaigns", [])
-  const [isCreator, setIsCreator] = useState(false)
-
-  useEffect(() => {
+  const [createdCampaigns] = useLocalStorage<CampaignData[]>("createdCampaigns", [])
+  const isCreator = useState(() => {
     const found = createdCampaigns.find((c) => c.id === campaign.id)
-    setIsCreator(!!found)
-  }, [createdCampaigns, campaign.id])
+    return !!found
+  })[0]
 
   const formatTimestamp = (timestamp: number) =>
     new Date(timestamp * 1000).toLocaleDateString("en-US", {

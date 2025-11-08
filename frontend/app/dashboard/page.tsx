@@ -10,13 +10,23 @@ import { CampaignCard } from "@/components/campaign-card"
 import { Modal } from "@/components/modal"
 import { AlertBox } from "@/components/alert-box"
 import { campaigns } from "@/data/campaign"
-import { Wrench, User, PlusCircle, BadgeCheck, Search, AlertCircle, LogOut, Trash2} from "lucide-react"
-import { validateRequired, validateNumber, validateMinLength } from "@/lib/validation"
+import { FilterDropdown } from "@/components/filter-dropdown"
+import { ProfileModal } from "@/components/ProfileModal"
+import { CreateTaskModal } from "@/components/CreateTaskModal"
+import { Wrench, User, PlusCircle, BadgeCheck, Search, AlertCircle, LogOut} from "lucide-react"
+import { validateRequired, validateNumber } from "@/lib/validation"
 import { useLocalStorage } from "@/hooks/use-localStorage"
 import { useRouter } from "next/navigation"
 import { usePrivy } from "@privy-io/react-auth"
+import { Campaign, Task } from "@/types/campaign"
 
-import { CampaignData } from "@/types/dashboard"
+interface CampaignFormData {
+  campaignName: string
+  dappLink: string
+  totalBudget: string
+  campaignEndTime: string
+  tasks: Task[]
+}
 
 export default function Dashboard() {
   const router = useRouter()
@@ -24,18 +34,22 @@ export default function Dashboard() {
   const [view, setView] = useState<"builder" | "user">("user")
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+  const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false)
   const [alert, setAlert] = useState({ isVisible: false, message: "", variant: "success" as "success" | "error" })
   const [joinedCampaigns, setJoinedCampaigns] = useLocalStorage<string[]>("joinedCampaigns", [])
-  const [createdCampaigns, setCreatedCampaigns] = useLocalStorage<CampaignData[]>("createdCampaigns", [])
+  const [createdCampaigns, setCreatedCampaigns] = useLocalStorage<Campaign[]>("createdCampaigns", [])
   const [searchTerm, setSearchTerm] = useState("")
+  const [filter, setFilter] = useState("All")
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
-  const [formData, setFormData] = useState<Omit<CampaignData, "id">>({
-    title: "",
-    description: "",
-    reward: "",
-    maxParticipants: "",
+  const [formData, setFormData] = useState<CampaignFormData>({
+    campaignName: "",
+    dappLink: "",
+    totalBudget: "",
+    campaignEndTime: "",
+    tasks: [],
   })
 
   useEffect(() => {
@@ -45,29 +59,47 @@ export default function Dashboard() {
   }, [ready, authenticated, router])
 
   const userName = user?.google?.name || user?.github?.name
+  const userEmail = user?.google?.email || user?.github?.email
+  const userPicture = user?.google?.picture || user?.github?.avatarUrl
 
-  const validateCreateForm = (): boolean => {
-    const newErrors: Record<string, string> = {}
+    const validateCreateForm = (): boolean => {
 
-    const titleError = validateRequired(formData.title, "title")
-    if (titleError) newErrors[titleError.field] = titleError.message
+      const newErrors: Record<string, string> = {}
 
-    const descError = validateMinLength(formData.description, "description", 10)
-    if (descError) newErrors[descError.field] = descError.message
+  
 
-    const rewardError = validateNumber(formData.reward, "reward")
-    if (rewardError) newErrors[rewardError.field] = rewardError.message
+      const campaignNameError = validateRequired(formData.campaignName, "Campaign Name")
 
-    const maxError = validateNumber(formData.maxParticipants, "maxParticipants")
-    if (maxError) newErrors[maxError.field] = maxError.message
+      if (campaignNameError) newErrors[campaignNameError.field] = campaignNameError.message
 
-    setFormErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+  
+
+      const dappLinkError = validateRequired(formData.dappLink, "DApp Link")
+
+      if (dappLinkError) newErrors[dappLinkError.field] = dappLinkError.message
+
+  
+
+      const totalBudgetError = validateNumber(formData.totalBudget, "Total Budget")
+
+      if (totalBudgetError) newErrors[totalBudgetError.field] = totalBudgetError.message
+
+  
+
+      const campaignEndTimeError = validateRequired(formData.campaignEndTime, "Campaign End Time")
+
+      if (campaignEndTimeError) newErrors[campaignEndTimeError.field] = campaignEndTimeError.message
+
+  
+
+      setFormErrors(newErrors)
+
+      return Object.keys(newErrors).length === 0
+
+    }
 
   const handleCreateCampaign = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-
     if (!validateCreateForm()) {
       setAlert({
         isVisible: true,
@@ -78,17 +110,31 @@ export default function Dashboard() {
       setTimeout(() => setIsShaking(false), 500)
       return
     }
-
     setIsLoading(true)
     await new Promise((resolve) => setTimeout(resolve, 800))
     setIsLoading(false)
-
-    const newCampaign = { ...formData, id: (createdCampaigns.length + 1).toString() }
+    const newCampaign: Campaign = {
+      id: (createdCampaigns.length + 1).toString(),
+      factory: "0x0000000000000000000000000000000000000000", // Placeholder
+      campaignName: formData.campaignName,
+      dappLink: formData.dappLink,
+      totalBudget: parseFloat(formData.totalBudget),
+      remainingBudget: parseFloat(formData.totalBudget),
+      campaignEndTime: new Date(formData.campaignEndTime).getTime() / 1000,
+      isActive: true,
+      taskCounter: 0,
+      tasks: [],
+    }
     setCreatedCampaigns([...createdCampaigns, newCampaign])
     setIsCreateModalOpen(false)
-    setFormData({ title: "", description: "", reward: "", maxParticipants: "" })
+    setFormData({
+      campaignName: "",
+      dappLink: "",
+      totalBudget: "",
+      campaignEndTime: "",
+      tasks: [],
+    })
     setFormErrors({})
-
     setAlert({
       isVisible: true,
       message: "Campaign created successfully!",
@@ -123,6 +169,14 @@ export default function Dashboard() {
     setTimeout(() => setAlert({ isVisible: false, message: "", variant: "success" }), 5000)
   }
 
+  const handleAddTask = (newTask: Task) => {
+    setFormData((prev) => ({
+      ...prev,
+      tasks: [...prev.tasks, newTask],
+    }))
+    setIsCreateTaskModalOpen(false)
+  }
+
   const handleLogout = async () => {
     setIsLogoutModalOpen(false)
     await logout()
@@ -136,11 +190,20 @@ export default function Dashboard() {
     }
   }
 
-  const filteredCampaigns = campaigns.filter(
-    (c) =>
-      c.campaignName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.tasks[0]?.description.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const filteredCampaigns = campaigns
+    .filter((c) => {
+      if (filter === "All") return true
+      if (filter === "Builder") return createdCampaigns.some((cc) => cc.id === c.id)
+      if (filter === "User") return joinedCampaigns.includes(c.id)
+      if (filter === "Joined") return joinedCampaigns.includes(c.id)
+      if (filter === "Unjoined") return !joinedCampaigns.includes(c.id)
+      return true
+    })
+    .filter(
+      (c) =>
+        c.campaignName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.tasks[0]?.description.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
 
   if (!ready || !authenticated) {
     return (
@@ -161,7 +224,6 @@ export default function Dashboard() {
     <>
       <Navbar />
       <main className="min-h-screen max-w-7xl mx-auto px-6 py-12">
-        {/* Welcome Section */}
         <AnimatedSection className="mb-12 p-6 bg-card border border-border rounded-lg">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
             <div>
@@ -170,17 +232,25 @@ export default function Dashboard() {
                 {view === "user" ? "Discover new campaigns and earn rewards" : "Manage your active campaigns"}
               </p>
             </div>
-            <button
-              onClick={() => setIsLogoutModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors font-semibold self-start md:self-auto"
-            >
-              <LogOut size={18} />
-              Logout
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsProfileModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors font-semibold self-start md:self-auto"
+              >
+                <User size={18} />
+                Profile
+              </button>
+              <button
+                onClick={() => setIsLogoutModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors font-semibold self-start md:self-auto"
+              >
+                <LogOut size={18} />
+                Logout
+              </button>
+            </div>
           </div>
         </AnimatedSection>
 
-        {/* Tabs */}
         <AnimatedSection className="mb-12">
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-8">
             <button
@@ -204,11 +274,10 @@ export default function Dashboard() {
           </div>
         </AnimatedSection>
 
-        {/* User View */}
         {view === "user" && (
           <AnimatedSection>
-            <div className="mb-8">
-              <div className="relative">
+            <div className="mb-8 flex items-center gap-4">
+              <div className="relative flex-grow">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
                 <input
                   type="text"
@@ -218,6 +287,7 @@ export default function Dashboard() {
                   className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent"
                 />
               </div>
+              <FilterDropdown onFilterChange={setFilter} />
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -227,9 +297,9 @@ export default function Dashboard() {
                     id={campaign.id}
                     title={campaign.campaignName}
                     description={campaign.tasks[0]?.description || "No description available."}
-                    icon={<Wrench size={24} />} // Placeholder icon
-                    participants={campaign.taskCounter} // Using taskCounter as a placeholder for participants
-                    reward={campaign.totalBudget.toString()} // Using totalBudget as a placeholder for reward
+                    icon={<Wrench size={24} />}
+                    participants={campaign.taskCounter}
+                    reward={campaign.totalBudget.toString()}
                     isJoined={joinedCampaigns.includes(campaign.id)}
                     onJoin={(e) => handleJoinCampaign(e, campaign.id)}
                     onLeave={(e) => handleLeaveCampaign(e, campaign.id)}
@@ -240,7 +310,6 @@ export default function Dashboard() {
           </AnimatedSection>
         )}
 
-        {/* Builder View */}
         {view === "builder" && (
           <AnimatedSection>
             <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -296,7 +365,6 @@ export default function Dashboard() {
           </AnimatedSection>
         )}
 
-        {/* Create Campaign Modal */}
         <Modal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
@@ -304,86 +372,112 @@ export default function Dashboard() {
           icon={<PlusCircle size={24} />}
         >
           <form onSubmit={handleCreateCampaign} className="space-y-4">
-            <div className={isShaking && formErrors.title ? 'shake' : ''}>
-              <label className="text-sm font-semibold text-foreground block mb-2">Campaign Title</label>
+            <div className={isShaking && formErrors.campaignName ? 'shake' : ''}>
+              <label className="text-sm font-semibold text-foreground block mb-2">Campaign Name</label>
               <input
                 type="text"
-                name="title"
-                value={formData.title}
+                name="campaignName"
+                value={formData.campaignName}
                 onChange={handleInputChange}
-                placeholder="Enter campaign title"
+                placeholder="Enter campaign name"
                 className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
-                  formErrors.title ? "border-red-500" : "border-border focus:border-accent"
+                  formErrors.campaignName ? "border-red-500" : "border-border focus:border-accent"
                 }`}
               />
-              {formErrors.title && (
+              {formErrors.campaignName && (
                 <div className="flex items-center gap-2 mt-1.5 text-red-400 text-sm">
                   <AlertCircle size={14} />
-                  {formErrors.title}
+                  {formErrors.campaignName}
                 </div>
               )}
             </div>
 
-            <div className={isShaking && formErrors.description ? 'shake' : ''}>
-              <label className="text-sm font-semibold text-foreground block mb-2">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
+            <div className={isShaking && formErrors.dappLink ? 'shake' : ''}>
+              <label className="text-sm font-semibold text-foreground block mb-2">DApp Link</label>
+              <input
+                type="url"
+                name="dappLink"
+                value={formData.dappLink}
                 onChange={handleInputChange}
-                placeholder="What do you want users to do? (min. 10 characters)"
-                required
-                rows={3}
-                className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors resize-none ${
-                  formErrors.description ? "border-red-500" : "border-border focus:border-accent"
+                placeholder="e.g., https://example.com"
+                className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
+                  formErrors.dappLink ? "border-red-500" : "border-border focus:border-accent"
                 }`}
               />
-              {formErrors.description && (
+              {formErrors.dappLink && (
                 <div className="flex items-center gap-2 mt-1.5 text-red-400 text-sm">
                   <AlertCircle size={14} />
-                  {formErrors.description}
+                  {formErrors.dappLink}
                 </div>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className={isShaking && formErrors.reward ? 'shake' : ''}>
-                <label className="text-sm font-semibold text-foreground block mb-2">Reward Amount</label>
-                <input
-                  type="text"
-                  name="reward"
-                  value={formData.reward}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 500"
-                  className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
-                    formErrors.reward ? "border-red-500" : "border-border focus:border-accent"
-                  }`}
-                />
-                {formErrors.reward && (
-                  <div className="flex items-center gap-2 mt-1.5 text-red-400 text-xs">
-                    <AlertCircle size={12} />
-                    {formErrors.reward}
-                  </div>
-                )}
-              </div>
-              <div className={isShaking && formErrors.maxParticipants ? 'shake' : ''}>
-                <label className="text-sm font-semibold text-foreground block mb-2">Max Participants</label>
+              <div className={isShaking && formErrors.totalBudget ? 'shake' : ''}>
+                <label className="text-sm font-semibold text-foreground block mb-2">Total Budget (ETH)</label>
                 <input
                   type="number"
-                  name="maxParticipants"
-                  value={formData.maxParticipants}
+                  name="totalBudget"
+                  value={formData.totalBudget}
                   onChange={handleInputChange}
-                  placeholder="100"
+                  placeholder="e.g., 100"
+                  step="0.01"
                   className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
-                    formErrors.maxParticipants ? "border-red-500" : "border-border focus:border-accent"
+                    formErrors.totalBudget ? "border-red-500" : "border-border focus:border-accent"
                   }`}
                 />
-                {formErrors.maxParticipants && (
+                {formErrors.totalBudget && (
                   <div className="flex items-center gap-2 mt-1.5 text-red-400 text-xs">
                     <AlertCircle size={12} />
-                    {formErrors.maxParticipants}
+                    {formErrors.totalBudget}
                   </div>
                 )}
               </div>
+              <div className={isShaking && formErrors.campaignEndTime ? 'shake' : ''}>
+                <label className="text-sm font-semibold text-foreground block mb-2">Campaign End Time</label>
+                <input
+                  type="datetime-local"
+                  name="campaignEndTime"
+                  value={formData.campaignEndTime}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
+                    formErrors.campaignEndTime ? "border-red-500" : "border-border focus:border-accent"
+                  }`}
+                />
+                {formErrors.campaignEndTime && (
+                  <div className="flex items-center gap-2 mt-1.5 text-red-400 text-xs">
+                    <AlertCircle size={12} />
+                    {formErrors.campaignEndTime}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground">Tasks</h3>
+              {formData.tasks.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No tasks added yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {formData.tasks.map((task, index) => (
+                    <li key={index} className="flex justify-between items-center bg-background border border-border rounded-lg p-3">
+                      <div>
+                        <p className="font-medium">{task.title}</p>
+                        <p className="text-sm text-muted-foreground">{task.description}</p>
+                      </div>
+                      <span className="text-sm font-bold">{task.reward} ETH</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsCreateTaskModalOpen(true)}
+                className="w-full py-2.5 bg-secondary text-secondary-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              >
+                <PlusCircle size={18} />
+                Add Task
+              </button>
             </div>
 
             <button
@@ -406,7 +500,6 @@ export default function Dashboard() {
           </form>
         </Modal>
 
-        {/* Logout Confirmation Modal */}
         <Modal
           isOpen={isLogoutModalOpen}
           onClose={() => setIsLogoutModalOpen(false)}
@@ -432,7 +525,18 @@ export default function Dashboard() {
           </div>
         </Modal>
 
-        {/* Alert Box */}
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          user={{
+            name: userName,
+            email: userEmail,
+            picture: userPicture,
+          }}
+          createdCampaigns={createdCampaigns.length}
+          joinedCampaigns={joinedCampaigns.length}
+        />
+
         <AlertBox
           isVisible={alert.isVisible}
           icon={alert.variant === "error" ? <AlertCircle size={20} /> : <BadgeCheck size={20} />}
@@ -440,6 +544,11 @@ export default function Dashboard() {
           message={alert.message}
           onClose={() => setAlert({ isVisible: false, message: "", variant: "success" })}
           variant={alert.variant}
+        />
+        <CreateTaskModal
+          isOpen={isCreateTaskModalOpen}
+          onClose={() => setIsCreateTaskModalOpen(false)}
+          onAddTask={handleAddTask}
         />
       </main>
       <Footer />
