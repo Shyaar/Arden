@@ -1,14 +1,12 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { AnimatedSection } from "@/components/animated-section"
-import { Rocket, MousePointer, Quote, ArrowRight, Hammer, BadgeCheck } from "lucide-react"
+import { Rocket, Quote, ArrowRight } from "lucide-react"
 
 export default function Home() {
-  const [email, setEmail] = useState("")
   const router = useRouter()
 
   const testimonials = [
@@ -88,7 +86,7 @@ export default function Home() {
                       </span>
                     ))}
                   </div>
-                  <p className="text-muted-foreground mb-4 italic">"{testimonial.quote}"</p>
+                  <p className="text-muted-foreground mb-4 italic">&quot;{testimonial.quote}&quot;</p>
                   <div>
                     <p className="font-semibold text-foreground">{testimonial.name}</p>
                     <p className="text-sm text-muted-foreground">{testimonial.role}</p>

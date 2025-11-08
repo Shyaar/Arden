@@ -67,7 +67,7 @@ export default function About() {
         <AnimatedSection className="bg-card border border-border rounded-lg p-12 text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to join the community?</h2>
           <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Whether you're a builder looking to launch or a user ready to earn, Arden is the perfect place to grow.
+            Whether you&apos;re a builder looking to launch or a user ready to earn, Arden is the perfect place to grow.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a

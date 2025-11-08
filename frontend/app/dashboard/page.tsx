@@ -128,8 +128,8 @@ export default function Dashboard() {
 
   const filteredCampaigns = campaigns.filter(
     (c) =>
-      c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.description.toLowerCase().includes(searchTerm.toLowerCase()),
+      c.campaignName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.tasks[0]?.description.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   if (!ready || !authenticated) {
@@ -215,11 +215,11 @@ export default function Dashboard() {
                 <AnimatedSection key={campaign.id} delay={idx * 0.05}>
                   <CampaignCard
                     id={campaign.id}
-                    title={campaign.title}
-                    description={campaign.description}
-                    icon={<campaign.icon size={24} />}
-                    participants={campaign.participants}
-                    reward={campaign.reward}
+                    title={campaign.campaignName}
+                    description={campaign.tasks[0]?.description || "No description available."}
+                    icon={<Wrench size={24} />} // Placeholder icon
+                    participants={campaign.taskCounter} // Using taskCounter as a placeholder for participants
+                    reward={campaign.totalBudget.toString()} // Using totalBudget as a placeholder for reward
                     isJoined={joinedCampaigns.includes(campaign.id)}
                     onAction={() => handleJoinCampaign(campaign.id)}
                   />
@@ -271,11 +271,11 @@ export default function Dashboard() {
                 <AnimatedSection key={campaign.id} delay={idx * 0.05}>
                   <CampaignCard
                     id={campaign.id}
-                    title={campaign.title}
-                    description={campaign.description}
-                    icon={<campaign.icon size={24} />}
-                    participants={campaign.participants}
-                    reward={campaign.reward}
+                    title={campaign.campaignName}
+                    description={campaign.tasks[0]?.description || "No description available."}
+                    icon={<Wrench size={24} />} // Placeholder icon
+                    participants={campaign.taskCounter} // Using taskCounter as a placeholder for participants
+                    reward={campaign.totalBudget.toString()} // Using totalBudget as a placeholder for reward
                     onAction={() => {}}
                     isBuilder={true}
                   />
