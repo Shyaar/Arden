@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import type { ReactNode } from "react"
 import { motion } from "framer-motion"
 import { Users, Award, ArrowRight, Check } from "lucide-react"
@@ -17,6 +18,7 @@ interface CampaignCardProps {
 }
 
 export function CampaignCard({
+  id,
   title,
   description,
   icon,
@@ -56,29 +58,28 @@ export function CampaignCard({
         </div>
       </div>
 
-      <button
-        onClick={onAction}
-        className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
-          isJoined
-            ? "bg-muted text-muted-foreground cursor-default"
-            : isBuilder
+      {isJoined ? (
+        <button
+          onClick={onAction}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all bg-muted text-muted-foreground cursor-default"
+          disabled={isJoined}
+        >
+          <Check size={18} />
+          Complete Tasks
+        </button>
+      ) : (
+        <Link
+          href={`/campaign/${id}`}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+            isBuilder
               ? "bg-accent text-accent-foreground hover:opacity-90"
               : "bg-primary text-primary-foreground hover:opacity-90 group-hover:gap-3"
-        }`}
-        disabled={isJoined}
-      >
-        {isJoined ? (
-          <>
-            <Check size={18} />
-            Complete Tasks
-          </>
-        ) : (
-          <>
-            {isBuilder ? "View" : "Join"}
-            <ArrowRight size={18} />
-          </>
-        )}
-      </button>
+          }`}
+        >
+          {isBuilder ? "View" : "Join"}
+          <ArrowRight size={18} />
+        </Link>
+      )}
     </motion.div>
   )
 }
