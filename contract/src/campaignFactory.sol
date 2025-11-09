@@ -14,6 +14,8 @@ contract CampaignFactory is Ownable {
     mapping(address => bool) public isCampaignAddress;
     bool public paused;
 
+    event TaskCompleted(address indexed user, address indexed campaign, uint256 indexed taskId);
+
     modifier whenNotPaused() {
         if (paused) revert Errors.Factory_Paused();
         _;
@@ -54,6 +56,26 @@ contract CampaignFactory is Ownable {
             campaignAddress,
             block.timestamp
         );
+    }
+
+    /**
+     * @notice Verify and reward user for completing a task
+     * @dev This function can be called by the factory owner (oracle/backend) after verifying task completion
+     * @param _campaignAddress The campaign contract address
+     * @param _user The user who completed the task
+     * @param _taskId The ID of the completed task
+     */
+    function verifyAndRewardUser(
+        address _campaignAddress,
+        address _user,
+        uint256 _taskId
+    ) external onlyOwner {
+        require(isCampaignAddress[_campaignAddress], "Invalid campaign address");
+        
+        Campaign campaign = Campaign(payable(_campaignAddress));
+        campaign.rewardUser(_user, _taskId);
+        
+        emit TaskCompleted(_user, _campaignAddress, _taskId);
     }
 
     function getAllCampaigns() external view returns (address[] memory) {
