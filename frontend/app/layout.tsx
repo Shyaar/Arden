@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   title: "Arden - Find Your First Users",
   description: "Arden helps new builders find their first real users via incentivized campaigns",
   generator: "v0.app",
+  icons: {
+    icon: "/logo.png",
+  },
 }
 
 export default function RootLayout({

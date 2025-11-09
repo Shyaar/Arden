@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-
+import "./lib/events/campaignEvents.sol";
+import "./lib/errors/campaignErrors.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -18,6 +19,7 @@ contract Campaign is Ownable, ReentrancyGuard {
     string public dappLink;
     uint256 public totalBudget;
     uint256 public remainingBudget;
+    uint256 public reservedBudget; // funds reserved for created tasks (not yet paid out)
     uint256 public campaignEndTime;
     bool public isActive;
     uint256 private taskCounter;
@@ -38,31 +40,6 @@ contract Campaign is Ownable, ReentrancyGuard {
     mapping(uint256 => Task) public tasks;
     mapping(address => mapping(uint256 => bool)) public userTaskCompletion;
     mapping(address => uint256) public userTotalRewards;
-
-    // ============ Events ============
-    
-    event BudgetIncreased(uint256 amount, uint256 newTotal);
-    event TaskCreated(uint256 indexed taskId, string title, uint256 reward);
-    event TaskToggled(uint256 indexed taskId, bool status);
-    event CampaignToggled(bool status);
-    event RewardDistributed(
-        address indexed user,
-        uint256 indexed taskId,
-        uint256 amount
-    );
-    event FundsWithdrawn(address indexed owner, uint256 amount);
-
-    // ============ Errors ============
-    
-    error OnlyFactory();
-    error CampaignInactive();
-    error TaskInactive();
-    error TaskAlreadyCompleted();
-    error InsufficientBudget();
-    error CampaignNotEnded();
-    error TaskNotFound();
-    error InvalidReward();
-    error TransferFailed();
 
     // ============ Modifiers ============
     
@@ -89,11 +66,13 @@ contract Campaign is Ownable, ReentrancyGuard {
         address _owner,
         string memory _campaignName,
         string memory _dappLink,
+        uint256 _budget,
         uint256 _campaignEndTime
     ) Ownable(_owner) {
         factory = msg.sender;
         campaignName = _campaignName;
         dappLink = _dappLink;
+        totalBudget = _budget;
         campaignEndTime = _campaignEndTime;
         isActive = true;
     }
@@ -127,6 +106,7 @@ contract Campaign is Ownable, ReentrancyGuard {
         uint256 _reward
     ) external onlyOwner campaignActive {
         if (_reward == 0) revert InvalidReward();
+        if (block.timestamp > campaignEndTime) revert CampaignNotEnded();
         if (_reward > remainingBudget) revert InsufficientBudget();
 
         uint256 taskId = taskCounter++;
@@ -139,6 +119,10 @@ contract Campaign is Ownable, ReentrancyGuard {
             isActive: true,
             completionCount: 0
         });
+
+        // Reserve funds for this task so owner cannot double spend
+        remainingBudget -= _reward;
+        reservedBudget += _reward;
 
         emit TaskCreated(taskId, _title, _reward);
     }
@@ -198,20 +182,22 @@ contract Campaign is Ownable, ReentrancyGuard {
         nonReentrant 
     {
         if (_taskId >= taskCounter) revert TaskNotFound();
-        
+        if (_user == address(0)) revert InvalidAddress();
+
         Task storage task = tasks[_taskId];
         
         if (!task.isActive) revert TaskInactive();
         if (!isActive) revert CampaignInactive();
+        if (block.timestamp > campaignEndTime) revert CampaignNotEnded();
         if (userTaskCompletion[_user][_taskId]) revert TaskAlreadyCompleted();
-        if (task.reward > remainingBudget) revert InsufficientBudget();
+        if (task.reward > reservedBudget) revert InsufficientBudget();
 
         // Mark task as completed for user
         userTaskCompletion[_user][_taskId] = true;
         task.completionCount++;
         
-        // Update budgets and user tracking
-        remainingBudget -= task.reward;
+        // Update reserved budget and user tracking
+        reservedBudget -= task.reward;
         userTotalRewards[_user] += task.reward;
         
         // Transfer reward
@@ -261,6 +247,7 @@ contract Campaign is Ownable, ReentrancyGuard {
      * @return link DApp link
      * @return total Total budget
      * @return remaining Remaining budget
+     * @return reserved Reserved funds for tasks
      * @return endTime Campaign end time
      * @return active Campaign status
      */
@@ -272,6 +259,7 @@ contract Campaign is Ownable, ReentrancyGuard {
             string memory link,
             uint256 total,
             uint256 remaining,
+            uint256 reserved,
             uint256 endTime,
             bool active
         ) 
@@ -281,6 +269,7 @@ contract Campaign is Ownable, ReentrancyGuard {
             dappLink,
             totalBudget,
             remainingBudget,
+            reservedBudget,
             campaignEndTime,
             isActive
         );
@@ -297,6 +286,7 @@ contract Campaign is Ownable, ReentrancyGuard {
         
         uint256 balance = address(this).balance;
         remainingBudget = 0;
+        reservedBudget = 0; // wipes reserved funds for tasks
         
         (bool success, ) = payable(owner()).call{value: balance}("");
         if (!success) revert TransferFailed();
@@ -315,4 +305,3 @@ contract Campaign is Ownable, ReentrancyGuard {
         emit BudgetIncreased(msg.value, totalBudget);
     }
 }
-
