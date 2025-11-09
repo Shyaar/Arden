@@ -13,6 +13,7 @@ export const campaigns: Campaign[] = [
     totalBudget: 1000,
     currentAmount: 500,
     targetAmount: 1000,
+    backers: 0,
     remainingBudget: 500,
     campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 7, // 7 days from now
     isActive: true,
@@ -58,6 +59,7 @@ export const campaigns: Campaign[] = [
     totalBudget: 800,
     currentAmount: 500,
     targetAmount: 800,
+    backers: 0,
     remainingBudget: 300,
     campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 14, // 14 days from now
     isActive: true,
@@ -94,6 +96,7 @@ export const campaigns: Campaign[] = [
     totalBudget: 600,
     currentAmount: 0,
     targetAmount: 600,
+    backers: 0,
     remainingBudget: 600,
     campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 3, // 3 days from now
     isActive: false,
@@ -121,6 +124,7 @@ export const campaigns: Campaign[] = [
     totalBudget: 700,
     currentAmount: 500,
     targetAmount: 700,
+    backers: 0,
     remainingBudget: 200,
     campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 10, // 10 days from now
     isActive: true,
@@ -157,6 +161,7 @@ export const campaigns: Campaign[] = [
     totalBudget: 900,
     currentAmount: 500,
     targetAmount: 900,
+    backers: 0,
     remainingBudget: 400,
     campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 5, // 5 days from now
     isActive: true,
@@ -184,6 +189,7 @@ export const campaigns: Campaign[] = [
     totalBudget: 550,
     currentAmount: 400,
     targetAmount: 550,
+    backers: 0,
     remainingBudget: 150,
     campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 12, // 12 days from now
     isActive: true,
@@ -210,6 +216,7 @@ export const campaigns: Campaign[] = [
       totalBudget: 1000,
       currentAmount: 0,
       targetAmount: 1000,
+      backers: 0,
       remainingBudget: 1000,
       campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 30, // 30 days from now
       isActive: true,
