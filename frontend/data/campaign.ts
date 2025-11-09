@@ -1,12 +1,18 @@
 import { Campaign } from "@/types/campaign"
+import { slugify } from "@/lib/utils"
 
 export const campaigns: Campaign[] = [
   {
     id: "1",
+    slug: slugify("Launch Analytics Dashboard") + "-1",
     factory: "0x123abc...",
     campaignName: "Launch Analytics Dashboard",
+    description: "A campaign to launch and gather feedback on our new analytics dashboard.",
+    owner: "0xOwner1Address",
     dappLink: "https://analytics.example.com",
     totalBudget: 1000,
+    currentAmount: 500,
+    targetAmount: 1000,
     remainingBudget: 500,
     campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 7, // 7 days from now
     isActive: true,
@@ -19,6 +25,7 @@ export const campaigns: Campaign[] = [
         reward: 100,
         isActive: true,
         completionCount: 50,
+        completed: false,
       },
       {
         id: 2,
@@ -27,6 +34,7 @@ export const campaigns: Campaign[] = [
         reward: 150,
         isActive: true,
         completionCount: 30,
+        completed: false,
       },
       {
         id: 3,
@@ -35,15 +43,21 @@ export const campaigns: Campaign[] = [
         reward: 250,
         isActive: false,
         completionCount: 20,
+        completed: false,
       },
     ],
   },
   {
     id: "2",
+    slug: slugify("Beta Test Database Tool") + "-2",
     factory: "0x456def...",
     campaignName: "Beta Test Database Tool",
+    description: "Seeking testers for our new database management tool.",
+    owner: "0xOwner2Address",
     dappLink: "https://database.example.com",
     totalBudget: 800,
+    currentAmount: 500,
+    targetAmount: 800,
     remainingBudget: 300,
     campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 14, // 14 days from now
     isActive: true,
@@ -56,6 +70,7 @@ export const campaigns: Campaign[] = [
         reward: 200,
         isActive: true,
         completionCount: 10,
+        completed: false,
       },
       {
         id: 2,
@@ -64,15 +79,21 @@ export const campaigns: Campaign[] = [
         reward: 100,
         isActive: true,
         completionCount: 5,
+        completed: false,
       },
     ],
   },
   {
     id: "3",
+    slug: slugify("Design System Review") + "-3",
     factory: "0x789ghi...",
     campaignName: "Design System Review",
+    description: "Review and provide feedback on our new design system.",
+    owner: "0xOwner3Address",
     dappLink: "https://design.example.com",
     totalBudget: 600,
+    currentAmount: 0,
+    targetAmount: 600,
     remainingBudget: 600,
     campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 3, // 3 days from now
     isActive: false,
@@ -85,15 +106,21 @@ export const campaigns: Campaign[] = [
         reward: 100,
         isActive: true,
         completionCount: 15,
+        completed: false,
       },
     ],
   },
   {
     id: "4",
+    slug: slugify("API Integration Testing") + "-4",
     factory: "0xabcjkl...",
     campaignName: "API Integration Testing",
+    description: "Test the integration of our new API with various services.",
+    owner: "0xOwner4Address",
     dappLink: "https://api.example.com",
     totalBudget: 700,
+    currentAmount: 500,
+    targetAmount: 700,
     remainingBudget: 200,
     campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 10, // 10 days from now
     isActive: true,
@@ -106,6 +133,7 @@ export const campaigns: Campaign[] = [
         reward: 150,
         isActive: true,
         completionCount: 25,
+        completed: false,
       },
       {
         id: 2,
@@ -114,15 +142,21 @@ export const campaigns: Campaign[] = [
         reward: 100,
         isActive: true,
         completionCount: 20,
+        completed: false,
       },
     ],
   },
   {
     id: "5",
+    slug: slugify("Mobile App Feedback") + "-5",
     factory: "0xdefmno...",
     campaignName: "Mobile App Feedback",
+    description: "Provide feedback on the new features of our mobile application.",
+    owner: "0xOwner5Address",
     dappLink: "https://mobile.example.com",
     totalBudget: 900,
+    currentAmount: 500,
+    targetAmount: 900,
     remainingBudget: 400,
     campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 5, // 5 days from now
     isActive: true,
@@ -135,15 +169,21 @@ export const campaigns: Campaign[] = [
         reward: 200,
         isActive: true,
         completionCount: 10,
+        completed: false,
       },
     ],
   },
   {
     id: "6",
+    slug: slugify("Component Library Testing") + "-6",
     factory: "0xghipqr...",
     campaignName: "Component Library Testing",
+    description: "Test and validate components in our new UI library.",
+    owner: "0xOwner6Address",
     dappLink: "https://components.example.com",
     totalBudget: 550,
+    currentAmount: 400,
+    targetAmount: 550,
     remainingBudget: 150,
     campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 12, // 12 days from now
     isActive: true,
@@ -156,7 +196,34 @@ export const campaigns: Campaign[] = [
         reward: 75,
         isActive: true,
         completionCount: 30,
+        completed: false,
       },
     ],
-  },
-]
+      },
+      {
+        id: "d-e816856c-7ef4-4c38-ba69-eca6d9506bd7",
+        slug: slugify("User Reported Campaign") + "-d-e816856c-7ef4-4c38-ba69-eca6d9506bd7",      factory: "0x1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B", // Placeholder
+      campaignName: "User Reported Campaign",
+      description: "A campaign created by a user to address a reported issue.",
+      owner: "0xUserAddress",
+      dappLink: "https://example.com/user-campaign", // Placeholder
+      totalBudget: 1000,
+      currentAmount: 0,
+      targetAmount: 1000,
+      remainingBudget: 1000,
+      campaignEndTime: Math.floor(Date.now() / 1000) + 86400 * 30, // 30 days from now
+      isActive: true,
+      taskCounter: 1,
+      tasks: [
+        {
+          id: 1,
+          title: "Investigate 404 Error",
+          description: "Reproduce and fix the 404 error on the campaign details page.",
+          reward: 500,
+          isActive: true,
+          completionCount: 0,
+          completed: false,
+        },
+      ],
+    },
+  ]

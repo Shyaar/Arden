@@ -1,8 +1,8 @@
 "use client"
 
-import type React from "react"
+import { v4 as uuidv4 } from "uuid"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react" // Added useMemo
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { AnimatedSection } from "@/components/animated-section"
@@ -10,17 +10,25 @@ import { CampaignCard } from "@/components/campaign-card"
 import { Modal } from "@/components/modal"
 import { AlertBox } from "@/components/alert-box"
 import { campaigns } from "@/data/campaign"
-import { Wrench, User, PlusCircle, BadgeCheck, Search, AlertCircle, LogOut } from "lucide-react"
-import { validateRequired, validateNumber, validateMinLength } from "@/lib/validation"
+import { FilterDropdown } from "@/components/filter-dropdown"
+import { ProfileModal } from "@/components/ProfileModal"
+import { Wrench, User, PlusCircle, BadgeCheck, Search, AlertCircle, LogOut, Globe} from "lucide-react"
+import { validateRequired, validateNumber, validateUrl, validateFutureDatetime } from "@/lib/validation"
 import { useLocalStorage } from "@/hooks/use-localStorage"
 import { useRouter } from "next/navigation"
 import { usePrivy } from "@privy-io/react-auth"
+import { slugify } from "@/lib/utils"
+import { Campaign, Task } from "@/types/campaign"
+import { OwnedCampaignDetailsModal } from "@/components/OwnedCampaignDetailsModal" // New import
+import { DiscoverCampaignDetailsModal } from "@/components/DiscoverCampaignDetailsModal" // New import
 
-interface CampaignData {
-  title: string
-  description: string
-  reward: string
-  maxParticipants: string
+interface CampaignFormData {
+  campaignName: string
+  description: string // New field
+  dappLink: string
+  totalBudget: string
+  campaignEndTime: string
+  tasks: Task[]
 }
 
 export default function Dashboard() {
@@ -29,19 +37,48 @@ export default function Dashboard() {
   const [view, setView] = useState<"builder" | "user">("user")
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [alert, setAlert] = useState({ isVisible: false, message: "", variant: "success" as "success" | "error" })
   const [joinedCampaigns, setJoinedCampaigns] = useLocalStorage<string[]>("joinedCampaigns", [])
-  const [createdCampaigns, setCreatedCampaigns] = useLocalStorage<CampaignData[]>("createdCampaigns", [])
+  const [createdCampaigns, setCreatedCampaigns] = useLocalStorage<Campaign[]>("createdCampaigns", [])
   const [searchTerm, setSearchTerm] = useState("")
+  const [filter, setFilter] = useState("All")
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
-  const [formData, setFormData] = useState<CampaignData>({
-    title: "",
-    description: "",
-    reward: "",
-    maxParticipants: "",
+  const [formData, setFormData] = useState<CampaignFormData>({
+    campaignName: "",
+    description: "", // Initialize new field
+    dappLink: "",
+    totalBudget: "",
+    campaignEndTime: "",
+    tasks: [],
   })
+  const [isOwnedCampaignModalOpen, setIsOwnedCampaignModalOpen] = useState(false); // New state
+  const [selectedOwnedCampaign, setSelectedOwnedCampaign] = useState<Campaign | null>(null); // New state
+  const [isDiscoverCampaignModalOpen, setIsDiscoverCampaignModalOpen] = useState(false); // New state
+  const [selectedDiscoverCampaign, setSelectedDiscoverCampaign] = useState<Campaign | null>(null); // New state
+
+  // Effect to disable body scroll when any modal is open
+  useEffect(() => {
+    const anyModalOpen =
+      isCreateModalOpen ||
+      isLogoutModalOpen ||
+      isProfileModalOpen ||
+      isOwnedCampaignModalOpen ||
+      isDiscoverCampaignModalOpen;
+
+    if (anyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    // Cleanup function to re-enable scroll when component unmounts or dependencies change
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isCreateModalOpen, isLogoutModalOpen, isProfileModalOpen, isOwnedCampaignModalOpen, isDiscoverCampaignModalOpen]);
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -49,30 +86,50 @@ export default function Dashboard() {
     }
   }, [ready, authenticated, router])
 
-  const userName = user?.google?.name || user?.github?.name
+  const userName = user?.google?.name || user?.github?.name || undefined
+  const userEmail = user?.google?.email || user?.github?.email || undefined
+  const userPicture = (user?.google as any)?.picture || (user?.github as any)?.avatarUrl || undefined
 
-  const validateCreateForm = (): boolean => {
-    const newErrors: Record<string, string> = {}
+    const validateCreateForm = (): boolean => {
 
-    const titleError = validateRequired(formData.title, "title")
-    if (titleError) newErrors[titleError.field] = titleError.message
+      const newErrors: Record<string, string> = {}
 
-    const descError = validateMinLength(formData.description, "description", 10)
-    if (descError) newErrors[descError.field] = descError.message
+  
 
-    const rewardError = validateNumber(formData.reward, "reward")
-    if (rewardError) newErrors[rewardError.field] = rewardError.message
+      const campaignNameError = validateRequired(formData.campaignName, "Campaign Name")
 
-    const maxError = validateNumber(formData.maxParticipants, "maxParticipants")
-    if (maxError) newErrors[maxError.field] = maxError.message
+      if (campaignNameError) newErrors[campaignNameError.field] = campaignNameError.message
 
-    setFormErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+      const descriptionError = validateRequired(formData.description, "Description") // Validate description
+      if (descriptionError) newErrors[descriptionError.field] = descriptionError.message
+  
+
+      const dappLinkError = validateUrl(formData.dappLink, "DApp Link")
+
+      if (dappLinkError) newErrors[dappLinkError.field] = dappLinkError.message
+
+  
+
+      const totalBudgetError = validateNumber(formData.totalBudget, "Total Budget")
+
+      if (totalBudgetError) newErrors[totalBudgetError.field] = totalBudgetError.message
+
+  
+
+      const campaignEndTimeError = validateFutureDatetime(formData.campaignEndTime, "Campaign End Time")
+
+      if (campaignEndTimeError) newErrors[campaignEndTimeError.field] = campaignEndTimeError.message
+
+  
+
+      setFormErrors(newErrors)
+
+      return Object.keys(newErrors).length === 0
+
+    }
 
   const handleCreateCampaign = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-
     if (!validateCreateForm()) {
       setAlert({
         isVisible: true,
@@ -83,16 +140,40 @@ export default function Dashboard() {
       setTimeout(() => setIsShaking(false), 500)
       return
     }
-
     setIsLoading(true)
     await new Promise((resolve) => setTimeout(resolve, 800))
     setIsLoading(false)
-
-    setCreatedCampaigns([...createdCampaigns, formData])
+    const newCampaignId = uuidv4(); // Generate ID first
+    const newCampaign: Campaign = {
+      id: newCampaignId,
+      slug: "", // Initialize slug with an empty string or a temporary value
+      factory: "0x0000000000000000000000000000000000000000", // Placeholder
+      campaignName: formData.campaignName,
+      description: formData.description, // Add description to new campaign
+      owner: user?.id || "", // Initialize owner with user ID
+      dappLink: formData.dappLink,
+      totalBudget: parseFloat(formData.totalBudget),
+      currentAmount: 0, // Initialize currentAmount
+      targetAmount: parseFloat(formData.totalBudget), // Initialize targetAmount
+      remainingBudget: parseFloat(formData.totalBudget),
+      campaignEndTime: new Date(formData.campaignEndTime).getTime() / 1000,
+      isActive: true,
+      taskCounter: 0,
+      backers: 0, // Initialize backers
+      tasks: [],
+    }
+    newCampaign.slug = slugify(newCampaign.campaignName) + "-" + newCampaign.id; // Assign correct slug
+    setCreatedCampaigns([...createdCampaigns, newCampaign])
     setIsCreateModalOpen(false)
-    setFormData({ title: "", description: "", reward: "", maxParticipants: "" })
+    setFormData({
+      campaignName: "",
+      description: "", // Clear description field
+      dappLink: "",
+      totalBudget: "",
+      campaignEndTime: "",
+      tasks: [],
+    })
     setFormErrors({})
-
     setAlert({
       isVisible: true,
       message: "Campaign created successfully!",
@@ -101,7 +182,9 @@ export default function Dashboard() {
     setTimeout(() => setAlert({ isVisible: false, message: "", variant: "success" }), 5000)
   }
 
-  const handleJoinCampaign = (campaignId: string) => {
+  const handleJoinCampaign = (e: React.MouseEvent, campaignId: string) => {
+    e.stopPropagation()
+    e.preventDefault()
     if (!joinedCampaigns.includes(campaignId)) {
       setJoinedCampaigns([...joinedCampaigns, campaignId])
       setAlert({
@@ -111,6 +194,18 @@ export default function Dashboard() {
       })
       setTimeout(() => setAlert({ isVisible: false, message: "", variant: "success" }), 5000)
     }
+  }
+
+  const handleLeaveCampaign = (e: React.MouseEvent, campaignId: string) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setJoinedCampaigns(joinedCampaigns.filter((id) => id !== campaignId))
+    setAlert({
+      isVisible: true,
+      message: "You have left the campaign.",
+      variant: "success",
+    })
+    setTimeout(() => setAlert({ isVisible: false, message: "", variant: "success" }), 5000)
   }
 
   const handleLogout = async () => {
@@ -126,11 +221,25 @@ export default function Dashboard() {
     }
   }
 
-  const filteredCampaigns = campaigns.filter(
-    (c) =>
-      c.campaignName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.tasks[0]?.description.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const allAvailableCampaigns = useMemo(() => {
+    const combined = [...campaigns, ...createdCampaigns];
+    const uniqueCampaigns = Array.from(new Set(combined.map(item => item.id)))
+      .map(id => combined.find(item => item.id === id));
+    return uniqueCampaigns.filter(Boolean) as Campaign[]; // Filter out any undefined if find fails
+  }, [createdCampaigns]);
+
+  const filteredCampaigns = allAvailableCampaigns
+    .filter((c) => {
+      if (filter === "All") return true;
+      if (filter === "Joined") return joinedCampaigns.includes(c.id);
+      if (filter === "Unjoined") return !joinedCampaigns.includes(c.id);
+      return true;
+    })
+    .filter(
+      (c) =>
+        c.campaignName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.tasks[0]?.description.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
 
   if (!ready || !authenticated) {
     return (
@@ -147,11 +256,14 @@ export default function Dashboard() {
     )
   }
 
+  const handleUpdateSelectedOwnedCampaign = (updatedCampaign: Campaign) => {
+    setSelectedOwnedCampaign(updatedCampaign);
+  };
+
   return (
     <>
       <Navbar />
-      <main className="min-h-screen max-w-7xl mx-auto px-6 py-12">
-        {/* Welcome Section */}
+      <main className="min-h-screen max-w-7xl mx-auto px-6 py-12 overflow-y-auto custom-scrollbar">
         <AnimatedSection className="mb-12 p-6 bg-card border border-border rounded-lg">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
             <div>
@@ -160,17 +272,25 @@ export default function Dashboard() {
                 {view === "user" ? "Discover new campaigns and earn rewards" : "Manage your active campaigns"}
               </p>
             </div>
-            <button
-              onClick={() => setIsLogoutModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors font-semibold self-start md:self-auto"
-            >
-              <LogOut size={18} />
-              Logout
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsProfileModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors font-semibold self-start md:self-auto"
+              >
+                <User size={18} />
+                Profile
+              </button>
+              <button
+                onClick={() => setIsLogoutModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors font-semibold self-start md:self-auto"
+              >
+                <LogOut size={18} />
+                Logout
+              </button>
+            </div>
           </div>
         </AnimatedSection>
 
-        {/* Tabs */}
         <AnimatedSection className="mb-12">
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-8">
             <button
@@ -194,11 +314,10 @@ export default function Dashboard() {
           </div>
         </AnimatedSection>
 
-        {/* User View */}
         {view === "user" && (
           <AnimatedSection>
-            <div className="mb-8">
-              <div className="relative">
+            <div className="mb-8 flex items-center gap-4">
+              <div className="relative flex-grow">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
                 <input
                   type="text"
@@ -208,20 +327,28 @@ export default function Dashboard() {
                   className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent"
                 />
               </div>
+              <FilterDropdown onFilterChange={setFilter} />
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredCampaigns.map((campaign, idx) => (
-                <AnimatedSection key={campaign.id} delay={idx * 0.05}>
+                <AnimatedSection key={campaign.id} delay={idx * 0.02}>
                   <CampaignCard
                     id={campaign.id}
+                    slug={campaign.slug || slugify(campaign.campaignName) + "-" + campaign.id}
+                    onClick={() => {
+                      setSelectedDiscoverCampaign(campaign);
+                      setIsDiscoverCampaignModalOpen(true);
+                    }}
                     title={campaign.campaignName}
-                    description={campaign.tasks[0]?.description || "No description available."}
-                    icon={<Wrench size={24} />} // Placeholder icon
-                    participants={campaign.taskCounter} // Using taskCounter as a placeholder for participants
-                    reward={campaign.totalBudget.toString()} // Using totalBudget as a placeholder for reward
+                    description={campaign.description || "No description available."}
+                    icon={<Globe size={24} />}
+                    participants={campaign.taskCounter}
+                    reward={campaign.totalBudget.toString()}
+                    taskCount={campaign.taskCounter} // Pass taskCount
                     isJoined={joinedCampaigns.includes(campaign.id)}
-                    onAction={() => handleJoinCampaign(campaign.id)}
+                    onJoin={(e) => handleJoinCampaign(e, campaign.id)}
+                    onLeave={(e) => handleLeaveCampaign(e, campaign.id)}
                   />
                 </AnimatedSection>
               ))}
@@ -229,7 +356,6 @@ export default function Dashboard() {
           </AnimatedSection>
         )}
 
-        {/* Builder View */}
         {view === "builder" && (
           <AnimatedSection>
             <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -246,46 +372,51 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {createdCampaigns.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold mb-4">Your Created Campaigns</h3>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {createdCampaigns.map((campaign, idx) => (
-                    <AnimatedSection key={idx} delay={idx * 0.05}>
-                      <div className="bg-card border border-accent/30 rounded-lg p-6">
-                        <h4 className="font-semibold mb-2 text-foreground">{campaign.title}</h4>
-                        <p className="text-sm text-muted-foreground mb-4">{campaign.description}</p>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-accent">{campaign.reward}</span>
-                          <span className="text-muted-foreground">Max: {campaign.maxParticipants}</span>
-                        </div>
-                      </div>
-                    </AnimatedSection>
-                  ))}
-                </div>
+            {createdCampaigns.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {createdCampaigns.map((campaign) => (
+                  <AnimatedSection key={campaign.id} delay={0}>
+                    <CampaignCard
+                      id={campaign.id}
+                      slug={campaign.slug}
+                      onClick={() => { // Modified onClick
+                        setSelectedOwnedCampaign(campaign);
+                        setIsOwnedCampaignModalOpen(true);
+                      }}
+                      title={campaign.campaignName}
+                      description={campaign.description || campaign.dappLink}
+                      icon={<Wrench size={24} />}
+                      participants={campaign.taskCounter}
+                      reward={(campaign.totalBudget ?? 0).toString()}
+                      taskCount={campaign.taskCounter} // Pass taskCount
+                      isBuilder={true}
+                      onJoin={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                      }}
+                      onLeave={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                      }}
+                    />
+                  </AnimatedSection>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
+                <p className="text-muted-foreground mb-2">You haven&apos;t created any campaigns yet.</p>
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="inline-flex items-center gap-2 text-primary font-semibold hover:underline"
+                >
+                  <PlusCircle size={18} />
+                  Create your first campaign
+                </button>
               </div>
             )}
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {campaigns.map((campaign, idx) => (
-                <AnimatedSection key={campaign.id} delay={idx * 0.05}>
-                  <CampaignCard
-                    id={campaign.id}
-                    title={campaign.campaignName}
-                    description={campaign.tasks[0]?.description || "No description available."}
-                    icon={<Wrench size={24} />} // Placeholder icon
-                    participants={campaign.taskCounter} // Using taskCounter as a placeholder for participants
-                    reward={campaign.totalBudget.toString()} // Using totalBudget as a placeholder for reward
-                    onAction={() => {}}
-                    isBuilder={true}
-                  />
-                </AnimatedSection>
-              ))}
-            </div>
           </AnimatedSection>
         )}
 
-        {/* Create Campaign Modal */}
         <Modal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
@@ -293,34 +424,33 @@ export default function Dashboard() {
           icon={<PlusCircle size={24} />}
         >
           <form onSubmit={handleCreateCampaign} className="space-y-4">
-            <div className={isShaking && formErrors.title ? 'shake' : ''}>
-              <label className="text-sm font-semibold text-foreground block mb-2">Campaign Title</label>
+            <div className={isShaking && formErrors.campaignName ? 'shake' : ''}>
+              <label className="text-sm font-semibold text-foreground block mb-2">Campaign Name</label>
               <input
                 type="text"
-                name="title"
-                value={formData.title}
+                name="campaignName"
+                value={formData.campaignName}
                 onChange={handleInputChange}
-                placeholder="Enter campaign title"
+                placeholder="Enter campaign name"
                 className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
-                  formErrors.title ? "border-red-500" : "border-border focus:border-accent"
+                  formErrors.campaignName ? "border-red-500" : "border-border focus:border-accent"
                 }`}
               />
-              {formErrors.title && (
+              {formErrors.campaignName && (
                 <div className="flex items-center gap-2 mt-1.5 text-red-400 text-sm">
                   <AlertCircle size={14} />
-                  {formErrors.title}
+                  {formErrors.campaignName}
                 </div>
               )}
             </div>
 
             <div className={isShaking && formErrors.description ? 'shake' : ''}>
-              <label className="text-sm font-semibold text-foreground block mb-2">Description</label>
+              <label className="text-sm font-semibold text-foreground block mb-2">Campaign Description</label>
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                placeholder="What do you want users to do? (min. 10 characters)"
-                required
+                placeholder="Describe your campaign in detail"
                 rows={3}
                 className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors resize-none ${
                   formErrors.description ? "border-red-500" : "border-border focus:border-accent"
@@ -334,42 +464,62 @@ export default function Dashboard() {
               )}
             </div>
 
+            <div className={isShaking && formErrors.dappLink ? 'shake' : ''}>
+              <label className="text-sm font-semibold text-foreground block mb-2">DApp Link</label>
+              <input
+                type="url"
+                name="dappLink"
+                value={formData.dappLink}
+                onChange={handleInputChange}
+                placeholder="e.g., https://example.com"
+                className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
+                  formErrors.dappLink ? "border-red-500" : "border-border focus:border-accent"
+                }`}
+              />
+              {formErrors.dappLink && (
+                <div className="flex items-center gap-2 mt-1.5 text-red-400 text-sm">
+                  <AlertCircle size={14} />
+                  {formErrors.dappLink}
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
-              <div className={isShaking && formErrors.reward ? 'shake' : ''}>
-                <label className="text-sm font-semibold text-foreground block mb-2">Reward Amount</label>
+              <div className={isShaking && formErrors.totalBudget ? 'shake' : ''}>
+                <label className="text-sm font-semibold text-foreground block mb-2">Total Budget (ETH)</label>
                 <input
-                  type="text"
-                  name="reward"
-                  value={formData.reward}
+                  type="number"
+                  name="totalBudget"
+                  value={formData.totalBudget}
                   onChange={handleInputChange}
-                  placeholder="e.g., 500"
+                  placeholder="e.g., 100"
+                  step="0.01"
                   className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
-                    formErrors.reward ? "border-red-500" : "border-border focus:border-accent"
+                    formErrors.totalBudget ? "border-red-500" : "border-border focus:border-accent"
                   }`}
                 />
-                {formErrors.reward && (
+                {formErrors.totalBudget && (
                   <div className="flex items-center gap-2 mt-1.5 text-red-400 text-xs">
                     <AlertCircle size={12} />
-                    {formErrors.reward}
+                    {formErrors.totalBudget}
                   </div>
                 )}
               </div>
-              <div className={isShaking && formErrors.maxParticipants ? 'shake' : ''}>
-                <label className="text-sm font-semibold text-foreground block mb-2">Max Participants</label>
+              <div className={isShaking && formErrors.campaignEndTime ? 'shake' : ''}>
+                <label className="text-sm font-semibold text-foreground block mb-2">Campaign End Time</label>
                 <input
-                  type="number"
-                  name="maxParticipants"
-                  value={formData.maxParticipants}
+                  type="datetime-local"
+                  name="campaignEndTime"
+                  value={formData.campaignEndTime}
                   onChange={handleInputChange}
-                  placeholder="100"
                   className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
-                    formErrors.maxParticipants ? "border-red-500" : "border-border focus:border-accent"
+                    formErrors.campaignEndTime ? "border-red-500" : "border-border focus:border-accent"
                   }`}
                 />
-                {formErrors.maxParticipants && (
+                {formErrors.campaignEndTime && (
                   <div className="flex items-center gap-2 mt-1.5 text-red-400 text-xs">
                     <AlertCircle size={12} />
-                    {formErrors.maxParticipants}
+                    {formErrors.campaignEndTime}
                   </div>
                 )}
               </div>
@@ -395,7 +545,6 @@ export default function Dashboard() {
           </form>
         </Modal>
 
-        {/* Logout Confirmation Modal */}
         <Modal
           isOpen={isLogoutModalOpen}
           onClose={() => setIsLogoutModalOpen(false)}
@@ -421,7 +570,25 @@ export default function Dashboard() {
           </div>
         </Modal>
 
-        {/* Alert Box */}
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          user={{
+            name: userName,
+            email: userEmail,
+            picture: userPicture,
+          }}
+          createdCampaigns={createdCampaigns.length}
+          joinedCampaigns={joinedCampaigns.length}
+        />
+
+        <OwnedCampaignDetailsModal // New modal
+          isOpen={isOwnedCampaignModalOpen}
+          onClose={() => setIsOwnedCampaignModalOpen(false)}
+          campaign={selectedOwnedCampaign}
+          onUpdateCampaign={handleUpdateSelectedOwnedCampaign}
+        />
+
         <AlertBox
           isVisible={alert.isVisible}
           icon={alert.variant === "error" ? <AlertCircle size={20} /> : <BadgeCheck size={20} />}
@@ -429,6 +596,11 @@ export default function Dashboard() {
           message={alert.message}
           onClose={() => setAlert({ isVisible: false, message: "", variant: "success" })}
           variant={alert.variant}
+        />
+        <DiscoverCampaignDetailsModal
+          isOpen={isDiscoverCampaignModalOpen}
+          onClose={() => setIsDiscoverCampaignModalOpen(false)}
+          campaign={selectedDiscoverCampaign}
         />
       </main>
       <Footer />

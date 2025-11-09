@@ -6,7 +6,7 @@ import { PrivyProvider } from "@privy-io/react-auth"
 export function ArdenPrivyProvider({ children }: { children: React.ReactNode }) {
   return (
     <PrivyProvider
-      appId="cmh0g14h503wcky0d49f33uxy"
+      appId="cmhqaffll00axjp0cqwpcv2zk"
       config={{
         // Customize Privy's appearance in your app
         appearance: {

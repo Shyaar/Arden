@@ -15,9 +15,8 @@ export function AnimatedSection({ children, delay = 0, className = "", id }: Ani
     <motion.div
       id={id}
       initial={{ opacity: 0, y: 12 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 0.6, delay }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay }}
       className={className}
     >
       {children}

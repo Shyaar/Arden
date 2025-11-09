@@ -1,6 +1,5 @@
 "use client"
 
-import type React from "react"
 import { useState } from "react"
 import { Campaign, Task } from "@/types/campaign"
 import {
@@ -13,86 +12,57 @@ import {
   Users,
   ArrowLeft,
   PartyPopper,
+  // Removed Edit, Trash2, PlusCircle
+  Target,
+  Trophy,
 } from "lucide-react"
+import Link from "next/link"
+import { useLocalStorage } from "@/hooks/use-localStorage"
 import { AnimatedSection } from "@/components/animated-section"
 import { AlertBox } from "@/components/alert-box"
-import Link from "next/link"
-
-// Helper component for consistent info display
-const InfoItem = ({
-  icon,
-  label,
-  value,
-  isAddress = false,
-  valueClass = "",
-}: {
-  icon: React.ReactNode
-  label: string
-  value: React.ReactNode
-  isAddress?: boolean
-  valueClass?: string
-}) => (
-  <div className="flex items-start justify-between">
-    <p className="flex items-center gap-2 text-muted-foreground">
-      {icon}
-      <span className="font-semibold">{label}:</span>
-    </p>
-    {isAddress && typeof value === "string" ? (
-      <p className={`text-sm font-mono text-right ${valueClass}`}>
-        {value.slice(0, 6)}...{value.slice(-4)}
-      </p>
-    ) : (
-      <p className={`text-right ${valueClass}`}>{value}</p>
-    )}
-  </div>
-)
-
-// Helper component for Task card
-const TaskCard = ({ task }: { task: Task }) => (
-  <div className="bg-card border border-border rounded-lg p-6 transition-shadow hover:shadow-lg">
-    <h3 className="text-xl font-semibold text-foreground mb-2">{task.title}</h3>
-    <p className="text-muted-foreground mb-4">{task.description}</p>
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <div className="flex items-center gap-2 text-sm text-accent font-semibold">
-        <DollarSign size={16} />
-        <span>{task.reward} Reward</span>
-      </div>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Users size={16} />
-        <span>{task.completionCount} Completions</span>
-      </div>
-      <div
-        className={`flex items-center gap-2 text-sm font-medium ${
-          task.isActive ? "text-green-500" : "text-red-500"
-        }`}
-      >
-        {task.isActive ? <CheckCircle size={16} /> : <XCircle size={16} />}
-        <span>{task.isActive ? "Active" : "Inactive"}</span>
-      </div>
-    </div>
-  </div>
-)
-
+// Removed CreateTaskModal, EditCampaignModal
 
 export const CampaignDetails = ({ campaign }: { campaign: Campaign }) => {
   const [alert, setAlert] = useState({ isVisible: false, message: "", variant: "success" as "success" | "error" })
+  // Removed createdCampaigns state
+  const [joinedCampaigns, setJoinedCampaigns] = useLocalStorage<Campaign[]>("joinedCampaigns", [])
+  // Removed isCreateTaskModalOpen, isEditCampaignModalOpen states
 
-  const formatTimestamp = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleDateString("en-US", {
+  // Removed isCreator state
+
+  const isJoined = useState(() => {
+    const found = joinedCampaigns.find((c) => c.id === campaign.id)
+    return !!found
+  })[0]
+
+  const formatTimestamp = (timestamp: number) =>
+    new Date(timestamp * 1000).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
     })
-  }
 
   const handleJoinCampaign = () => {
+    setJoinedCampaigns((prev) => [...prev, campaign]);
     setAlert({
       isVisible: true,
-      message: "Welcome! Check your email for next steps.",
+      message: "🎉 Welcome aboard! You have joined the campaign.",
       variant: "success",
-    })
-    setTimeout(() => setAlert({ isVisible: false, message: "", variant: "success" }), 5000)
-  }
+    });
+    setTimeout(() => setAlert({ isVisible: false, message: "", variant: "success" }), 5000);
+  };
+
+  const handleLeaveCampaign = () => {
+    setJoinedCampaigns((prev) => prev.filter((c) => c.id !== campaign.id));
+    setAlert({
+      isVisible: true,
+      message: "👋 You have left the campaign.",
+      variant: "success",
+    });
+    setTimeout(() => setAlert({ isVisible: false, message: "", variant: "success" }), 5000);
+  };
+
+  // Removed handleAddTask, handleEditCampaign, handleDeleteCampaign functions
 
   return (
     <main className="min-h-screen max-w-7xl mx-auto px-6 py-12">
@@ -100,25 +70,41 @@ export const CampaignDetails = ({ campaign }: { campaign: Campaign }) => {
       <AnimatedSection className="mb-8">
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
+          className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-6"
         >
           <ArrowLeft size={18} />
           Back to Dashboard
         </Link>
-        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 p-6 bg-card border border-border rounded-lg">
+
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 p-6 bg-gradient-to-tr from-card to-background border border-border rounded-2xl shadow-md">
           <div>
-            <h1 className="text-3xl font-bold mb-2">{campaign.campaignName}</h1>
+            <h1 className="text-4xl font-extrabold mb-2 text-foreground flex items-center gap-2">
+              <Target className="text-primary" size={28} />
+              {campaign.campaignName}
+            </h1>
             <p className="text-muted-foreground">
-              Join the movement and get rewarded for your participation.
+              Join the movement and earn rewards for your participation 🚀
             </p>
           </div>
-          <button
-            onClick={handleJoinCampaign}
-            className="flex items-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-semibold self-start md:self-auto"
-          >
-            <PartyPopper size={20} />
-            Join Campaign
-          </button>
+
+          {/* Only Join/Leave buttons for non-creators */}
+          {isJoined ? (
+            <button
+              onClick={handleLeaveCampaign}
+              className="flex items-center gap-2 px-5 py-3 bg-red-500 text-white rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] transition-all font-semibold"
+            >
+              <XCircle size={20} />
+              Leave Campaign
+            </button>
+          ) : (
+            <button
+              onClick={handleJoinCampaign}
+              className="flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] transition-all font-semibold"
+            >
+              <PartyPopper size={20} />
+              Join Campaign
+            </button>
+          )}
         </div>
       </AnimatedSection>
 
@@ -127,24 +113,27 @@ export const CampaignDetails = ({ campaign }: { campaign: Campaign }) => {
         {/* Left Column: Campaign Info */}
         <div className="lg:col-span-1">
           <AnimatedSection>
-            <div className="bg-card border border-border rounded-lg p-6 sticky top-24">
-              <h2 className="text-2xl font-semibold mb-4 text-foreground">Campaign Details</h2>
+            <div className="bg-card border border-border rounded-2xl p-6 sticky top-24 shadow-sm">
+              <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center gap-2">
+                <Hash className="text-primary" size={20} />
+                Campaign Info
+              </h2>
               <div className="space-y-3">
                 <InfoItem icon={<Hash size={18} />} label="Factory Address" value={campaign.factory} isAddress />
-                <InfoItem icon={<DollarSign size={18} />} label="Total Budget" value={campaign.totalBudget.toString()} />
+                <InfoItem icon={<DollarSign size={18} />} label="Total Budget" value={`${campaign.totalBudget} ETH`} />
                 <InfoItem
                   icon={<DollarSign size={18} />}
                   label="Remaining Budget"
-                  value={campaign.remainingBudget.toString()}
+                  value={`${campaign.remainingBudget} ETH`}
                 />
-                <InfoItem icon={<Calendar size={18} />} label="End Time" value={formatTimestamp(campaign.campaignEndTime)} />
+                <InfoItem icon={<Calendar size={18} />} label="End Date" value={formatTimestamp(campaign.campaignEndTime)} />
                 <InfoItem
                   icon={campaign.isActive ? <CheckCircle size={18} /> : <XCircle size={18} />}
                   label="Status"
                   value={campaign.isActive ? "Active" : "Inactive"}
                   valueClass={campaign.isActive ? "text-green-500" : "text-red-500"}
                 />
-                <InfoItem icon={<Users size={18} />} label="Task Completions" value={campaign.taskCounter.toString()} />
+                <InfoItem icon={<Users size={18} />} label="Task Count" value={campaign.taskCounter.toString()} />
                 <InfoItem
                   icon={<LinkIcon size={18} />}
                   label="DApp Link"
@@ -155,7 +144,7 @@ export const CampaignDetails = ({ campaign }: { campaign: Campaign }) => {
                       rel="noopener noreferrer"
                       className="text-accent hover:underline"
                     >
-                      Visit DApp
+                      Visit DApp ↗
                     </a>
                   }
                 />
@@ -167,7 +156,10 @@ export const CampaignDetails = ({ campaign }: { campaign: Campaign }) => {
         {/* Right Column: Tasks */}
         <div className="lg:col-span-2">
           <AnimatedSection>
-            <h2 className="text-2xl font-bold mb-4 text-foreground">Available Tasks</h2>
+            <h2 className="text-2xl font-bold mb-4 text-foreground flex items-center gap-2">
+              <Trophy className="text-yellow-500" size={24} />
+              Available Tasks
+            </h2>
             {campaign.tasks.length > 0 ? (
               <div className="space-y-6">
                 {campaign.tasks.map((task: Task, idx) => (
@@ -177,7 +169,7 @@ export const CampaignDetails = ({ campaign }: { campaign: Campaign }) => {
                 ))}
               </div>
             ) : (
-              <div className="bg-card border border-border rounded-lg p-8 text-center">
+              <div className="bg-card border border-border rounded-xl p-8 text-center">
                 <p className="text-muted-foreground">No tasks defined for this campaign yet.</p>
               </div>
             )}
@@ -194,6 +186,58 @@ export const CampaignDetails = ({ campaign }: { campaign: Campaign }) => {
         onClose={() => setAlert({ isVisible: false, message: "", variant: "success" })}
         variant={alert.variant}
       />
+
+      {/* Removed CreateTaskModal and EditCampaignModal */}
     </main>
   )
 }
+
+// ✅ Supporting Mini Components (InfoItem and TaskCard remain)
+const InfoItem = ({
+  icon,
+  label,
+  value,
+  valueClass,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: React.ReactNode
+  valueClass?: string
+  isAddress?: boolean
+}) => (
+  <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
+    <span className="text-muted-foreground flex items-center gap-2 min-w-[150px]">
+      {icon}
+      {label}:
+    </span>
+    <span className={`font-medium break-all ${valueClass || "text-foreground"}`}>{value}</span>
+  </div>
+)
+
+const TaskCard = ({ task }: { task: Task }) => (
+  <div className="p-6 bg-card border border-border rounded-2xl shadow-sm hover:shadow-md transition-all">
+    <h3 className="text-xl font-semibold flex items-center gap-2 text-foreground">
+      <Target className="text-primary" size={20} />
+      {task.title}
+    </h3>
+    <p className="text-muted-foreground mb-3 mt-1">{task.description}</p>
+    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+      <span className="flex items-center gap-1">
+        <DollarSign size={16} />
+        Reward: <strong className="text-foreground">{task.reward}</strong>
+      </span>
+      <span className="flex items-center gap-1">
+        {task.isActive ? (
+          <CheckCircle className="text-green-500" size={16} />
+        ) : (
+          <XCircle className="text-red-500" size={16} />
+        )}
+        {task.isActive ? "Active" : "Inactive"}
+      </span>
+      <span className="flex items-center gap-1">
+        <Users size={16} />
+        {task.completionCount} completions
+      </span>
+    </div>
+  </div>
+)

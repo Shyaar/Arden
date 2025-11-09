@@ -43,7 +43,7 @@ export default function Home() {
             <source src="/backgroung_video.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
-          <div className="absolute z-20 inset-0 bg-black/95"></div>
+          <div className="absolute z-20 inset-0 bg-black/90"></div>
           <AnimatedSection className="relative z-30 text-center text-white px-6 py-20 md:py-32">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full border border-accent/30 mb-6">
               <Rocket size={16} className="text-accent" />

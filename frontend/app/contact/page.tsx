@@ -89,7 +89,7 @@ export default function Contact() {
             </div>
             <h1 className="text-3xl md:text-4xl font-bold mb-4">Get in Touch</h1>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Have questions or feedback? We'd love to hear from you. Fill out the form below and we'll get back to you
+              Have questions or feedback? We&apos;d love to hear from you. Fill out the form below and we&apos;ll get back to you
               as soon as possible.
             </p>
           </div>
@@ -144,7 +144,7 @@ export default function Contact() {
                 name="message"
                 value={formData.message}
                 onChange={handleInputChange}
-                placeholder="Tell us what's on your mind (min. 10 characters)"
+                placeholder="Tell us what&apos;s on your mind (min. 10 characters)"
                 rows={5}
                 className={`w-full px-3 py-2.5 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors resize-none ${
                   errors.message ? "border-red-500" : "border-border focus:border-accent"
