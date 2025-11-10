@@ -12,6 +12,7 @@ contract CampaignFactory is Ownable {
     address[] public allCampaigns;
     mapping(address => address[]) public campaignsByOwner;
     mapping(address => bool) public isCampaignAddress;
+    uint256 public platformFeeBps = 500; // 5%
     bool public paused;
 
 
@@ -32,24 +33,31 @@ contract CampaignFactory is Ownable {
     function createCampaign(
         string memory _campaignName,
         string memory _dappLink,
-        uint256 _endTime,
-        uint256 _budget
+        uint256 _endTime
     ) external payable whenNotPaused {
         UserRegistry.User memory user = userRegistry.getUser(msg.sender);
         if (!user.isVerified || user.role != UserRegistry.Role.PRODUCTOWNER) {
             revert Errors.Factory_NotVerifiedProductOwner();
         }
 
+        uint256 fee = (msg.value * platformFeeBps) / 10_000;
+        uint256 budgetForCampaign = msg.value - fee;
+
+        if (msg.value > 0 && fee > 0) {
+            (bool success, ) = owner().call{value: fee}("");
+            if (!success) revert Errors.Factory_InvalidFee();
+        }
+
         Campaign newCampaign = new Campaign(
             msg.sender,
             _campaignName,
             _dappLink,
-            _budget,
+            budgetForCampaign,
             _endTime
         );
 
-        if (msg.value > 0) {
-            newCampaign.increaseBudget{value: msg.value}();
+        if (budgetForCampaign > 0) {
+            newCampaign.increaseBudget{value: budgetForCampaign}();
         }
 
         address campaignAddress = address(newCampaign);
@@ -58,6 +66,9 @@ contract CampaignFactory is Ownable {
         isCampaignAddress[campaignAddress] = true;
 
         emit Events.CampaignCreated(msg.sender, campaignAddress, block.timestamp);
+        if (fee > 0) {
+            emit Events.PlatformFeePaid(campaignAddress, fee);
+        }
     }
 
 
@@ -137,6 +148,11 @@ contract CampaignFactory is Ownable {
     }
 
     // ================== Admin Functions ==================
+
+    function setPlatformFeeBps(uint256 _newFeeBps) external onlyOwner {
+        if (_newFeeBps > 2000) revert Errors.Factory_InvalidFee(); // max 20%
+        platformFeeBps = _newFeeBps;
+    }
 
     function togglePause() external onlyOwner {
         paused = !paused;

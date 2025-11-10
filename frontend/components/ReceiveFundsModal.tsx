@@ -3,7 +3,7 @@
 import { Modal } from "./modal"
 import { Copy, Check } from "lucide-react"
 import { useState } from "react"
-import { QRCodeCanvas } from "qrcode.react"
+// import { QRCodeCanvas } from "qrcode.react"
 
 interface ReceiveFundsModalProps {
   isOpen: boolean
@@ -54,7 +54,7 @@ export function ReceiveFundsModal({ isOpen, onClose, address }: ReceiveFundsModa
                     Scan the QR code or copy the address below to receive funds into your wallet.
                   </p>
                   <div className="flex flex-col items-center justify-center p-4 bg-card/50 rounded-lg">
-                    <QRCodeCanvas value={address || ""} size={128} />
+                    {/* <QRCodeCanvas value={address || ""} size={128} /> */}
                   </div>
                   <div className="flex items-center justify-between rounded-lg bg-card/50 p-4">
                     <span className="text-sm text-muted-foreground">{address}</span>

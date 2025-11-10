@@ -14,6 +14,7 @@ interface ProfileModalProps {
     email?: string
     picture?: string
   }
+  address: string | null
   createdCampaigns: number
   joinedCampaigns: number
 }
@@ -22,6 +23,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   isOpen,
   onClose,
   user,
+  address,
   createdCampaigns,
   joinedCampaigns,
 }) => {
@@ -35,6 +37,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           <div>
             <h2 className="text-2xl font-bold">{user.name}</h2>
             <p className="text-muted-foreground">{user.email}</p>
+            <p className="font-semibold pt-1">Your Arden Wallet Address is:</p>
+            <p className="text-muted-foreground">{address}</p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4 pt-4">
