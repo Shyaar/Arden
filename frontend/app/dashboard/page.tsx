@@ -36,6 +36,9 @@ import { Campaign, Task } from "@/types/campaign";
 import { OwnedCampaignDetailsModal } from "@/components/OwnedCampaignDetailsModal"; // New import
 import { DiscoverCampaignDetailsModal } from "@/components/DiscoverCampaignDetailsModal"; // New import
 import { useUsers } from "@/contract/hooks/useUsers";
+import LoadingModal from "@/components/ui/modals/LoadingModal";
+import { useRegisterUser } from "@/contract/hooks/useRegisterUsers";
+import { toast } from "react-toastify";
 
 interface CampaignFormData {
   campaignName: string;
@@ -48,8 +51,17 @@ interface CampaignFormData {
 
 export default function Dashboard() {
   const router = useRouter();
-  const { userData,isLoading } = useUsers()
-  console.log("userDAta@@@@:::::", userData)
+  const { userData, isLoading } = useUsers();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
+  const { register, isPending, isConfirming, isConfirmed, error } =
+    useRegisterUser();
+  console.log("userDAta@@@@:::::", userData?.userAddress);
+
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const { ready, authenticated, user, logout } = usePrivy();
   const [view, setView] = useState<"builder" | "user">("user");
@@ -111,6 +123,7 @@ export default function Dashboard() {
       document.body.style.overflow = "";
     };
   }, [
+    isLoading,
     isCreateModalOpen,
     isLogoutModalOpen,
     isProfileModalOpen,
@@ -118,37 +131,82 @@ export default function Dashboard() {
     isDiscoverCampaignModalOpen,
   ]);
 
-  
-useEffect(() => {
-  if (!ready || !authenticated || !user) return;
+  useEffect(() => {
+    if (!ready || !authenticated || !user) return;
 
-  const interval = setInterval(() => {
-    if (!user.linkedAccounts?.length) {
-      console.log("⏳ Waiting for linked accounts...");
-      return;
+    const interval = setInterval(() => {
+      if (!user.linkedAccounts?.length) {
+        console.log("⏳ Waiting for linked accounts...");
+        return;
+      }
+
+      console.log("Linked555555555:::", user.linkedAccounts);
+
+      const wallet =
+        user.linkedAccounts.find((a) => a.type === "smart_wallet") ||
+        user.linkedAccounts.find((a) => a.type === "wallet");
+
+      const gAccount = user.linkedAccounts.find(
+        (a) => a.type === "google_oauth"
+      );
+
+      if (gAccount?.name) {
+        console.log("✅ Wallet found!");
+        const [firstName, ...lastNameParts] = gAccount?.name.split(" ");
+        const lastName = lastNameParts.join(" ");
+        console.log("First Name ^^^^^^^^:", firstName);
+        console.log("Last Name>>>>>>>>>>:", lastName);
+        setFirstName(firstName);
+        setLastName(lastName);
+      }
+
+      if (wallet?.address) {
+        console.log("✅ Wallet found!");
+        console.log("Address:", wallet.address, typeof wallet.address);
+        setUserAddress(wallet.address);
+        
+
+        console.log("Type:", wallet.type);
+        clearInterval(interval);
+      } else {
+        console.log("Waiting for wallet to link...");
+      }
+    }, 1000);
+  }, [ready, authenticated, user]);
+
+  useEffect(() => {
+    const unregistered =
+      userData?.userAddress === "0x0000000000000000000000000000000000000000";
+
+    if (unregistered) {
+      console.log("fake Account @@@@@@@@£££");
+      registerUser();
+    }else{
+      console.log("welcomeBack")
     }
+  }, [userData?.userAddress]);
 
-    const wallet =
-      user.linkedAccounts.find((a) => a.type === "smart_wallet") ||
-      user.linkedAccounts.find((a) => a.type === "wallet");
+     useEffect(() => {
+ 
 
-    if (wallet?.address) {
-      console.log("✅ Wallet found!");
-      console.log("Address:", wallet.address, typeof(wallet.address));
-      setUserAddress(wallet.address);
+     if (isLoading) {
+       setShowModal(true);
+       setModalMessage("Please wait... the sun is warming up!! 🌞");
+     } else if (isPending || isConfirming) {
+       setShowModal(true);
+       setModalMessage("Please wait while we create your account...");
+     } else if ( isConfirmed || error) {
+       setShowModal(false);
+     }
+   }, [
+     isLoading,
+     isPending,
+     isConfirming,
+     isConfirmed,
+    error
+   ]);
 
-      console.log("Type:", wallet.type);
-      clearInterval(interval);
-    } else {
-      console.log("Waiting for wallet to link...");
-    }
-  }, 1000);
-
-
-}, [ready, authenticated, user]);
-
-console.log("USer ADDRESS :::: ", userAddress)
-
+  console.log("USer ADDRESS :::: ", userAddress);
 
   const userName = user?.google?.name || user?.github?.name || undefined;
   const userEmail = user?.google?.email || user?.github?.email || undefined;
@@ -156,6 +214,17 @@ console.log("USer ADDRESS :::: ", userAddress)
   //   (user?.google as any)?.picture ||
   //   (user?.github as any)?.avatarUrl ||
   //   undefined;
+
+  async function registerUser() {
+    try {
+      await register(firstName, lastName, 0);
+      toast.success("successfully registered");
+    } catch (err) {
+      console.log("Registration failed");
+    } finally {
+      setShowModal(false);
+    }
+  }
 
   const validateCreateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -331,7 +400,7 @@ console.log("USer ADDRESS :::: ", userAddress)
         <Navbar />
         <main className="min-h-screen max-w-7xl mx-auto px-6 py-12 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin mx-auto mb-4" />
+            <div className="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full  animate-spin mx-auto mb-4" />
             <p className="text-muted-foreground">Loading...</p>
           </div>
         </main>
@@ -348,7 +417,7 @@ console.log("USer ADDRESS :::: ", userAddress)
     <>
       <Navbar />
       <main className="min-h-screen max-w-7xl mx-auto px-6 py-12 overflow-y-auto custom-scrollbar">
-        <AnimatedSection className="mb-12 p-6 bg-card border border-border rounded-lg">
+        <AnimatedSection className="mb-12 p-6 bg-card border border-border ">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold mb-2">
@@ -363,14 +432,14 @@ console.log("USer ADDRESS :::: ", userAddress)
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setIsProfileModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors font-semibold self-start md:self-auto"
+                className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary  hover:bg-primary/20 transition-colors font-semibold self-start md:self-auto"
               >
                 <User size={18} />
                 Profile
               </button>
               <button
                 onClick={() => setIsLogoutModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors font-semibold self-start md:self-auto"
+                className="flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive  hover:bg-destructive/20 transition-colors font-semibold self-start md:self-auto"
               >
                 <LogOut size={18} />
                 Logout
@@ -383,7 +452,7 @@ console.log("USer ADDRESS :::: ", userAddress)
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-8">
             <button
               onClick={() => setView("user")}
-              className={`flex items-center gap-2 px-4 py-3 rounded-lg font-semibold transition-colors ${
+              className={`flex items-center gap-2 px-4 py-3  font-semibold transition-colors ${
                 view === "user"
                   ? "bg-accent text-accent-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -394,7 +463,7 @@ console.log("USer ADDRESS :::: ", userAddress)
             </button>
             <button
               onClick={() => setView("builder")}
-              className={`flex items-center gap-2 px-4 py-3 rounded-lg font-semibold transition-colors ${
+              className={`flex items-center gap-2 px-4 py-3  font-semibold transition-colors ${
                 view === "builder"
                   ? "bg-accent text-accent-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -419,7 +488,7 @@ console.log("USer ADDRESS :::: ", userAddress)
                   placeholder="Search campaigns..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent"
+                  className="w-full pl-10 pr-4 py-2.5 bg-card border border-border  text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent"
                 />
               </div>
               <FilterDropdown onFilterChange={setFilter} />
@@ -467,7 +536,7 @@ console.log("USer ADDRESS :::: ", userAddress)
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-semibold self-start md:self-auto"
+                className="flex items-center gap-2 px-4 py-3 bg-primary text-primary-foreground  hover:opacity-90 transition-opacity font-semibold self-start md:self-auto"
               >
                 <PlusCircle size={20} />
                 New Campaign
@@ -506,7 +575,7 @@ console.log("USer ADDRESS :::: ", userAddress)
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
+              <div className="text-center py-12 border-2 border-dashed border-border ">
                 <p className="text-muted-foreground mb-2">
                   You haven&apos;t created any campaigns yet.
                 </p>
@@ -541,7 +610,7 @@ console.log("USer ADDRESS :::: ", userAddress)
                 value={formData.campaignName}
                 onChange={handleInputChange}
                 placeholder="Enter campaign name"
-                className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
+                className={`w-full px-3 py-2 bg-card border  text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
                   formErrors.campaignName
                     ? "border-red-500"
                     : "border-border focus:border-accent"
@@ -565,7 +634,7 @@ console.log("USer ADDRESS :::: ", userAddress)
                 onChange={handleInputChange}
                 placeholder="Describe your campaign in detail"
                 rows={3}
-                className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors resize-none ${
+                className={`w-full px-3 py-2 bg-card border  text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors resize-none ${
                   formErrors.description
                     ? "border-red-500"
                     : "border-border focus:border-accent"
@@ -589,7 +658,7 @@ console.log("USer ADDRESS :::: ", userAddress)
                 value={formData.dappLink}
                 onChange={handleInputChange}
                 placeholder="e.g., https://example.com"
-                className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
+                className={`w-full px-3 py-2 bg-card border  text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
                   formErrors.dappLink
                     ? "border-red-500"
                     : "border-border focus:border-accent"
@@ -617,7 +686,7 @@ console.log("USer ADDRESS :::: ", userAddress)
                   onChange={handleInputChange}
                   placeholder="e.g., 100"
                   step="0.01"
-                  className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
+                  className={`w-full px-3 py-2 bg-card border  text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
                     formErrors.totalBudget
                       ? "border-red-500"
                       : "border-border focus:border-accent"
@@ -643,7 +712,7 @@ console.log("USer ADDRESS :::: ", userAddress)
                   name="campaignEndTime"
                   value={formData.campaignEndTime}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
+                  className={`w-full px-3 py-2 bg-card border  text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
                     formErrors.campaignEndTime
                       ? "border-red-500"
                       : "border-border focus:border-accent"
@@ -661,11 +730,11 @@ console.log("USer ADDRESS :::: ", userAddress)
             <button
               type="submit"
               disabled={dataLoad}
-              className="w-full py-2.5 bg-accent text-accent-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-accent text-accent-foreground  font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {dataLoad ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-accent-foreground/30 border-t-accent-foreground  animate-spin" />
                   Creating...
                 </>
               ) : (
@@ -691,13 +760,13 @@ console.log("USer ADDRESS :::: ", userAddress)
             <div className="flex justify-end gap-4">
               <button
                 onClick={() => setIsLogoutModalOpen(false)}
-                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-opacity font-semibold"
+                className="px-4 py-2 bg-secondary text-secondary-foreground  hover:opacity-90 transition-opacity font-semibold"
               >
                 Cancel
               </button>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90 transition-opacity font-semibold"
+                className="px-4 py-2 bg-destructive text-destructive-foreground  hover:opacity-90 transition-opacity font-semibold"
               >
                 Logout
               </button>
@@ -713,7 +782,7 @@ console.log("USer ADDRESS :::: ", userAddress)
             email: userEmail,
             // picture: userPicture,
           }}
-          address = {userAddress}
+          address={userAddress}
           createdCampaigns={createdCampaigns.length}
           joinedCampaigns={joinedCampaigns.length}
         />
@@ -746,6 +815,8 @@ console.log("USer ADDRESS :::: ", userAddress)
           onClose={() => setIsDiscoverCampaignModalOpen(false)}
           campaign={selectedDiscoverCampaign}
         />
+
+        <LoadingModal show={showModal} message={modalMessage} />
       </main>
       <Footer />
     </>
