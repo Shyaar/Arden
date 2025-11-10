@@ -1,13 +1,23 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import Image from "next/image"
-import { usePathname } from "next/navigation"
-import { useState, useEffect } from "react"
-import { Home, Layout, Info, Mail, Wallet, LogIn, LogOut, Menu, X } from "lucide-react"
-import { usePrivy } from "@privy-io/react-auth"
-import { WalletModal } from "./wallet-modal"
-import { useLocalStorage } from "@/hooks/use-localStorage"
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
+import {
+  Home,
+  Layout,
+  Info,
+  Mail,
+  Wallet,
+  LogIn,
+  LogOut,
+  Menu,
+  X,
+} from "lucide-react";
+import { usePrivy } from "@privy-io/react-auth";
+import { WalletModal } from "./wallet-modal";
+import { useRouter } from "next/navigation";
 
 import { LogoutModal } from "./LogoutModal"
 
@@ -24,17 +34,24 @@ export function Navbar() {
     { href: "/about", label: "About Us", icon: Info },
     { href: "/contact", label: "Contact", icon: Mail },
     { href: "/dashboard", label: "Dashboard", icon: Layout },
-  ]
+  ];
+
+  const router = useRouter();
+  useEffect(() => {
+    if (ready && authenticated) {
+      router.push("/dashboard");
+    }
+  }, [ready, authenticated, router]);
 
   const handleScroll = (href: string) => {
     if (href.includes("#")) {
-      const elementId = href.split("#")[1]
-      const element = document.getElementById(elementId)
+      const elementId = href.split("#")[1];
+      const element = document.getElementById(elementId);
       if (element) {
-        element.scrollIntoView({ behavior: "smooth" })
+        element.scrollIntoView({ behavior: "smooth" });
       }
     }
-  }
+  };
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -45,9 +62,9 @@ export function Navbar() {
 
   useEffect(() => {
     if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     }
   }, [isMobileMenuOpen]);
 
@@ -55,7 +72,10 @@ export function Navbar() {
     <>
       <nav className="sticky  top-0 z-[990] border-b border-border bg-background/95 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group hover:opacity-80 transition-opacity">
+          <Link
+            href="/"
+            className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
+          >
             <Image src="/logo.png" alt="Arden Logo" width={32} height={32} />
             <span className="font-bold text-lg text-foreground">Arden</span>
           </Link>
@@ -68,11 +88,11 @@ export function Navbar() {
                   href={href}
                   onClick={(e) => {
                     if (href.includes("#")) {
-                      e.preventDefault()
-                      handleScroll(href)
+                      e.preventDefault();
+                      handleScroll(href);
                     }
                   }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center gap-2 px-3 py-2 transition-colors ${
                     pathname === href || pathname === href.split("#")[0]
                       ? "text-accent bg-accent/10"
                       : "text-muted-foreground hover:text-foreground"
@@ -85,17 +105,21 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-3">
-           {ready && authenticated && user && (
-  <div className="hidden xl:flex items-center px-3 py-2 bg-card border border-border rounded-lg">
-    <span className="text-sm font-medium text-foreground">
-      Welcome, {user.google?.name || user.github?.username || user.github?.name || "User"}
-    </span>
-  </div>
-)}
+              {ready && authenticated && user && (
+                <div className="hidden xl:flex items-center px-3 py-2 bg-card border border-border">
+                  <span className="text-sm font-medium text-foreground">
+                    Welcome,{" "}
+                    {user.google?.name ||
+                      user.github?.username ||
+                      user.github?.name ||
+                      "User"}
+                  </span>
+                </div>
+              )}
 
               <button
                 onClick={() => setIsWalletOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium"
               >
                 <Wallet size={18} />
                 <span className="text-sm hidden md:inline">Wallet</span>
@@ -104,7 +128,10 @@ export function Navbar() {
           </div>
 
           <div className="lg:hidden">
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
@@ -112,8 +139,14 @@ export function Navbar() {
       </nav>
 
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[998] bg-background/80 lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
-          <div className="fixed top-16 right-0 bottom-0 z-[999] w-full max-w-xs bg-card border-l border-border p-6" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-[998] bg-background/80 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          <div
+            className="fixed top-16 right-0 bottom-0 z-[999] w-full max-w-xs bg-card border-l border-border p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex flex-col gap-4">
               {links.map(({ href, label, icon: Icon }) => (
                 <Link
@@ -121,11 +154,11 @@ export function Navbar() {
                   href={href}
                   onClick={() => {
                     if (href.includes("#")) {
-                      handleScroll(href)
+                      handleScroll(href);
                     }
-                    setIsMobileMenuOpen(false)
+                    setIsMobileMenuOpen(false);
                   }}
-                  className={`flex items-center gap-3 p-3 rounded-lg transition-colors text-base font-medium ${
+                  className={`flex items-center gap-3 p-3 transition-colors text-base font-medium ${
                     pathname === href || pathname === href.split("#")[0]
                       ? "text-accent bg-accent/10"
                       : "text-muted-foreground hover:text-foreground"
@@ -137,20 +170,21 @@ export function Navbar() {
               ))}
 
               <div className="border-t border-border pt-4 mt-4 flex flex-col gap-4">
-            {ready && authenticated && user && (
-  <div className="hidden xl:flex items-center px-3 py-2 bg-card border border-border rounded-lg">
-    <span className="text-sm font-medium text-foreground">
-      Welcome, {user.google?.name || user.github?.username || user.github?.name || "User"}
-    </span>
-  </div>
-)}
+                {ready && authenticated && user && (
+                  <div className="hidden xl:flex items-center px-3 py-2 bg-card border border-border">
+                    <span className="text-sm font-medium text-foreground">
+                      Welcome,{" "}
+                      {user.google?.name ||
+                        user.github?.username ||
+                        user.github?.name ||
+                        "User"}
+                    </span>
+                  </div>
+                )}
 
                 <button
-                  onClick={() => {
-                    setIsWalletOpen(true)
-                    setIsMobileMenuOpen(false)
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium"
+                  onClick={() => setIsWalletOpen(true)}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium"
                 >
                   <Wallet size={18} />
                   <span className="text-sm">Wallet</span>
@@ -181,5 +215,5 @@ export function Navbar() {
         isLoggingOut={isLoggingOut}
       />
     </>
-  )
+  );
 }

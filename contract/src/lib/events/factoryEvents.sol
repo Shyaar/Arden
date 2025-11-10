@@ -8,4 +8,5 @@ library Events {
         uint256 timestamp
     );
     event PausedStateChanged(bool isPaused);
+    event PlatformFeePaid(address indexed campaign, uint256 feeAmount);
 }
